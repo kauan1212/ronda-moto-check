@@ -1,10 +1,8 @@
 
 import React from 'react';
 import { useTheme } from 'next-themes';
-import { useAuth } from '@/contexts/AuthContext';
-import { Moon, Sun, LogOut, User } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,12 +10,6 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const { theme, setTheme } = useTheme();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/';
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
@@ -30,23 +22,9 @@ const Layout = ({ children }: LayoutProps) => {
             <h1 className="text-xl font-bold text-slate-800 dark:text-white">
               Vigilância Condomínio
             </h1>
-            {user && (
-              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                {user.role === 'admin' ? 'Administrador' : 'Vigilante'}
-              </Badge>
-            )}
           </div>
           
           <div className="flex items-center space-x-2">
-            {user && (
-              <div className="flex items-center space-x-2 mr-4">
-                <User className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                <span className="text-sm text-slate-600 dark:text-slate-300">
-                  {user.name}
-                </span>
-              </div>
-            )}
-            
             <Button
               variant="outline"
               size="icon"
@@ -59,17 +37,6 @@ const Layout = ({ children }: LayoutProps) => {
                 <Moon className="h-4 w-4" />
               )}
             </Button>
-            
-            {user && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleLogout}
-                className="hover:scale-105 transition-transform"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </div>
       </header>
