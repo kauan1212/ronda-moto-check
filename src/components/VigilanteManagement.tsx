@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Condominium } from '@/types';
@@ -35,6 +34,8 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
 
   const onSubmit = async (values: VigilanteFormData) => {
     try {
+      console.log('Submitting vigilante data:', values);
+      
       const vigilanteData = {
         name: values.name,
         email: values.email,
@@ -43,20 +44,28 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
         condominium_id: condominium.id,
       };
 
+      console.log('Vigilante data to be saved:', vigilanteData);
+
       if (editingVigilante) {
         const { error } = await supabase
           .from('vigilantes')
           .update(vigilanteData)
           .eq('id', editingVigilante.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating vigilante:', error);
+          throw error;
+        }
         toast.success('Vigilante atualizado com sucesso!');
       } else {
         const { error } = await supabase
           .from('vigilantes')
-          .insert(vigilanteData);
+          .insert([vigilanteData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating vigilante:', error);
+          throw error;
+        }
         toast.success('Vigilante criado com sucesso!');
       }
 
@@ -101,6 +110,17 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
     }
   };
 
+  const handleAddVigilante = () => {
+    setEditingVigilante(null);
+    form.reset({
+      name: '',
+      email: '',
+      registration: '',
+      status: 'active'
+    });
+    setDialogOpen(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -114,12 +134,10 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
               Gerencie os vigilantes do condomínio
             </CardDescription>
           </div>
-          <DialogTrigger asChild>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Vigilante
-            </Button>
-          </DialogTrigger>
+          <Button onClick={handleAddVigilante}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Vigilante
+          </Button>
         </div>
       </CardHeader>
       

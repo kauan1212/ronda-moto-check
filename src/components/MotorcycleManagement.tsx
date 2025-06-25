@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,6 +50,8 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
 
   const onSubmit = async (values: MotorcycleForm) => {
     try {
+      console.log('Submitting motorcycle data:', values);
+      
       const motorcycleData = {
         plate: values.plate,
         brand: values.brand,
@@ -60,20 +62,28 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         condominium_id: condominium.id,
       };
 
+      console.log('Motorcycle data to be saved:', motorcycleData);
+
       if (editingMotorcycle) {
         const { error } = await supabase
           .from('motorcycles')
           .update(motorcycleData)
           .eq('id', editingMotorcycle.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating motorcycle:', error);
+          throw error;
+        }
         toast.success('Motocicleta atualizada com sucesso!');
       } else {
         const { error } = await supabase
           .from('motorcycles')
-          .insert(motorcycleData);
+          .insert([motorcycleData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating motorcycle:', error);
+          throw error;
+        }
         toast.success('Motocicleta criada com sucesso!');
       }
 
@@ -120,6 +130,19 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
     }
   };
 
+  const handleAddMotorcycle = () => {
+    setEditingMotorcycle(null);
+    form.reset({
+      plate: '',
+      brand: '',
+      model: '',
+      year: new Date().getFullYear(),
+      color: '',
+      status: 'available'
+    });
+    setDialogOpen(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -133,144 +156,144 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
               Gerencie a frota de motocicletas do condomínio
             </CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Motocicleta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingMotorcycle ? 'Editar Motocicleta' : 'Nova Motocicleta'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingMotorcycle 
-                    ? 'Atualize as informações da motocicleta' 
-                    : 'Preencha as informações da nova motocicleta'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="plate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Placa *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ABC-1234" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="brand"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Marca *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Honda" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="model"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Modelo *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="CG 160" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="year"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ano *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="2023" 
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="color"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cor *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Vermelha" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="available">Disponível</SelectItem>
-                            <SelectItem value="in_use">Em Uso</SelectItem>
-                            <SelectItem value="maintenance">Manutenção</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit">
-                      {editingMotorcycle ? 'Atualizar' : 'Criar'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleAddMotorcycle}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Motocicleta
+          </Button>
         </div>
       </CardHeader>
+      
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingMotorcycle ? 'Editar Motocicleta' : 'Nova Motocicleta'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingMotorcycle 
+                ? 'Atualize as informações da motocicleta' 
+                : 'Preencha as informações da nova motocicleta'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="plate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Placa *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ABC-1234" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="brand"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Honda" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modelo *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="CG 160" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="year"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ano *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="2023" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cor *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Vermelha" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="available">Disponível</SelectItem>
+                        <SelectItem value="in_use">Em Uso</SelectItem>
+                        <SelectItem value="maintenance">Manutenção</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingMotorcycle ? 'Atualizar' : 'Criar'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
       <CardContent>
         <div className="space-y-3">
           {motorcycles.map((motorcycle) => (
