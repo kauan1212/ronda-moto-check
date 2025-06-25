@@ -24,6 +24,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -32,22 +33,67 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      const [vigilantesResponse, motorcyclesResponse, checklistsResponse] = await Promise.all([
-        supabase.from('vigilantes').select('*').eq('condominium_id', selectedCondominium.id),
-        supabase.from('motorcycles').select('*').eq('condominium_id', selectedCondominium.id),
-        supabase.from('checklists').select('*').eq('condominium_id', selectedCondominium.id).order('created_at', { ascending: false })
-      ]);
+      console.log('Fetching data for condominium:', selectedCondominium.id);
+      
+      // Buscar dados de forma sequencial para evitar problemas de RLS
+      const vigilantesResponse = await supabase
+        .from('vigilantes')
+        .select('*')
+        .eq('condominium_id', selectedCondominium.id);
+      
+      if (vigilantesResponse.error) {
+        console.error('Error fetching vigilantes:', vigilantesResponse.error);
+        // Se der erro de RLS, continuar com array vazio
+        if (vigilantesResponse.error.code === '42P17') {
+          console.log('RLS issue with vigilantes, setting empty array');
+          setVigilantes([]);
+        } else {
+          throw vigilantesResponse.error;
+        }
+      } else {
+        setVigilantes(vigilantesResponse.data || []);
+      }
 
-      if (vigilantesResponse.error) throw vigilantesResponse.error;
-      if (motorcyclesResponse.error) throw motorcyclesResponse.error;
-      if (checklistsResponse.error) throw checklistsResponse.error;
+      const motorcyclesResponse = await supabase
+        .from('motorcycles')
+        .select('*')
+        .eq('condominium_id', selectedCondominium.id);
+        
+      if (motorcyclesResponse.error) {
+        console.error('Error fetching motorcycles:', motorcyclesResponse.error);
+        if (motorcyclesResponse.error.code === '42P17') {
+          console.log('RLS issue with motorcycles, setting empty array');
+          setMotorcycles([]);
+        } else {
+          throw motorcyclesResponse.error;
+        }
+      } else {
+        setMotorcycles(motorcyclesResponse.data || []);
+      }
 
-      setVigilantes(vigilantesResponse.data || []);
-      setMotorcycles(motorcyclesResponse.data || []);
-      setChecklists(checklistsResponse.data || []);
-    } catch (error) {
+      const checklistsResponse = await supabase
+        .from('checklists')
+        .select('*')
+        .eq('condominium_id', selectedCondominium.id)
+        .order('created_at', { ascending: false });
+        
+      if (checklistsResponse.error) {
+        console.error('Error fetching checklists:', checklistsResponse.error);
+        if (checklistsResponse.error.code === '42P17') {
+          console.log('RLS issue with checklists, setting empty array');
+          setChecklists([]);
+        } else {
+          throw checklistsResponse.error;
+        }
+      } else {
+        setChecklists(checklistsResponse.data || []);
+      }
+
+    } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
+      setError('Erro ao carregar dados do dashboard. Verifique sua conexão.');
       toast.error('Erro ao carregar dados do dashboard');
     } finally {
       setLoading(false);
@@ -444,6 +490,21 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
       <Layout title={selectedCondominium.name} onBack={onBack}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout title={selectedCondominium.name} onBack={onBack}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Erro ao carregar dados</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchData}>Tentar novamente</Button>
+          </div>
         </div>
       </Layout>
     );

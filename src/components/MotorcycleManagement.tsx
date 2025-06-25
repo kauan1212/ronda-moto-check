@@ -19,7 +19,7 @@ const motorcycleSchema = z.object({
   plate: z.string().min(1, 'Placa é obrigatória'),
   brand: z.string().min(1, 'Marca é obrigatória'),
   model: z.string().min(1, 'Modelo é obrigatório'),
-  year: z.number().min(1900).max(new Date().getFullYear() + 1),
+  year: z.number().min(1900, 'Ano deve ser maior que 1900').max(new Date().getFullYear() + 1, 'Ano não pode ser futuro'),
   color: z.string().min(1, 'Cor é obrigatória'),
   status: z.enum(['available', 'in_use', 'maintenance'])
 });
@@ -53,7 +53,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       console.log('Submitting motorcycle data:', values);
       
       const motorcycleData = {
-        plate: values.plate,
+        plate: values.plate.toUpperCase(), // Sempre salvar placa em maiúscula
         brand: values.brand,
         model: values.model,
         year: values.year,
@@ -72,6 +72,17 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
 
         if (error) {
           console.error('Error updating motorcycle:', error);
+          
+          // Tratamento específico para erros de constraint
+          if (error.code === '23505') {
+            if (error.message.includes('plate')) {
+              toast.error('Esta placa já está sendo usada por outra motocicleta');
+            } else {
+              toast.error('Dados duplicados - verifique a placa');
+            }
+            return;
+          }
+          
           throw error;
         }
         toast.success('Motocicleta atualizada com sucesso!');
@@ -82,6 +93,17 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
 
         if (error) {
           console.error('Error creating motorcycle:', error);
+          
+          // Tratamento específico para erros de constraint
+          if (error.code === '23505') {
+            if (error.message.includes('plate')) {
+              toast.error('Esta placa já está sendo usada por outra motocicleta');
+            } else {
+              toast.error('Dados duplicados - verifique a placa');
+            }
+            return;
+          }
+          
           throw error;
         }
         toast.success('Motocicleta criada com sucesso!');
@@ -186,7 +208,11 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
                   <FormItem>
                     <FormLabel>Placa *</FormLabel>
                     <FormControl>
-                      <Input placeholder="ABC-1234" {...field} />
+                      <Input 
+                        placeholder="ABC-1234" 
+                        {...field} 
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -235,7 +261,10 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
                           type="number" 
                           placeholder="2023" 
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            field.onChange(isNaN(value) ? '' : value);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />

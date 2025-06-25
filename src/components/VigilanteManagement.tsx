@@ -8,7 +8,7 @@ import { Vigilante, Condominium } from '@/types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { vigilanteSchema, VigilanteForm as VigilanteFormData } from './vigilante/vigilanteSchema';
+import { vigilanteSchema, VigilanteForm } from './vigilante/vigilanteSchema';
 import VigilanteFormComponent from './vigilante/VigilanteForm';
 import VigilanteList from './vigilante/VigilanteList';
 
@@ -22,7 +22,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVigilante, setEditingVigilante] = useState<Vigilante | null>(null);
 
-  const form = useForm<VigilanteFormData>({
+  const form = useForm<VigilanteForm>({
     resolver: zodResolver(vigilanteSchema),
     defaultValues: {
       name: '',
@@ -32,7 +32,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
     }
   });
 
-  const onSubmit = async (values: VigilanteFormData) => {
+  const onSubmit = async (values: VigilanteForm) => {
     try {
       console.log('Submitting vigilante data:', values);
       
@@ -54,6 +54,19 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
 
         if (error) {
           console.error('Error updating vigilante:', error);
+          
+          // Tratamento específico para erros de constraint
+          if (error.code === '23505') {
+            if (error.message.includes('email')) {
+              toast.error('Este email já está sendo usado por outro vigilante');
+            } else if (error.message.includes('registration')) {
+              toast.error('Este número de registro já está sendo usado por outro vigilante');
+            } else {
+              toast.error('Dados duplicados - verifique email e registro');
+            }
+            return;
+          }
+          
           throw error;
         }
         toast.success('Vigilante atualizado com sucesso!');
@@ -64,6 +77,19 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
 
         if (error) {
           console.error('Error creating vigilante:', error);
+          
+          // Tratamento específico para erros de constraint
+          if (error.code === '23505') {
+            if (error.message.includes('email')) {
+              toast.error('Este email já está sendo usado por outro vigilante');
+            } else if (error.message.includes('registration')) {
+              toast.error('Este número de registro já está sendo usado por outro vigilante');
+            } else {
+              toast.error('Dados duplicados - verifique email e registro');
+            }
+            return;
+          }
+          
           throw error;
         }
         toast.success('Vigilante criado com sucesso!');
