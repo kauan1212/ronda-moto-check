@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { UseFormReturn } from 'react-hook-form';
 import { Vigilante } from '@/types';
+import { VigilanteForm } from './vigilanteSchema';
 
 interface VigilanteFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  form: UseFormReturn<any>;
-  onSubmit: (values: any) => void;
+  form: UseFormReturn<VigilanteForm>;
+  onSubmit: (values: VigilanteForm) => void;
   editingVigilante: Vigilante | null;
 }
 
@@ -82,7 +83,7 @@ const VigilanteFormComponent = ({ open, onOpenChange, form, onSubmit, editingVig
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o status" />
