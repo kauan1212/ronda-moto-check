@@ -46,18 +46,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile with proper column mapping
           setTimeout(async () => {
             try {
               const { data: profileData, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id, email, full_name, role, condominium_id')
                 .eq('id', session.user.id)
                 .single();
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
-              } else {
+              } else if (profileData) {
                 setProfile(profileData);
               }
             } catch (error) {
