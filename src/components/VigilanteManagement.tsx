@@ -1,28 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { DialogTrigger } from '@/components/ui/dialog';
+import { Plus, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Condominium } from '@/types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-
-const vigilanteSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  email: z.string().email('Email inválido'),
-  registration: z.string().min(1, 'Registro é obrigatório'),
-  status: z.enum(['active', 'inactive'])
-});
-
-type VigilanteForm = z.infer<typeof vigilanteSchema>;
+import { vigilanteSchema, VigilanteForm } from './vigilante/vigilanteSchema';
+import VigilanteForm from './vigilante/VigilanteForm';
+import VigilanteList from './vigilante/VigilanteList';
 
 interface VigilanteManagementProps {
   condominium: Condominium;
@@ -125,143 +114,28 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
               Gerencie os vigilantes do condomínio
             </CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Vigilante
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingVigilante ? 'Editar Vigilante' : 'Novo Vigilante'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingVigilante 
-                    ? 'Atualize as informações do vigilante' 
-                    : 'Preencha as informações do novo vigilante'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nome completo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="email@exemplo.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="registration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Registro *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Número de registro" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="active">Ativo</SelectItem>
-                            <SelectItem value="inactive">Inativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit">
-                      {editingVigilante ? 'Atualizar' : 'Criar'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <DialogTrigger asChild>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Vigilante
+            </Button>
+          </DialogTrigger>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {vigilantes.map((vigilante) => (
-            <div key={vigilante.id} className="flex justify-between items-center p-3 border rounded-lg">
-              <div>
-                <p className="font-medium">{vigilante.name}</p>
-                <p className="text-sm text-gray-600">{vigilante.email}</p>
-                <p className="text-xs text-gray-500">Registro: {vigilante.registration}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={vigilante.status === 'active' ? 'default' : 'secondary'}>
-                  {vigilante.status === 'active' ? 'Ativo' : 'Inativo'}
-                </Badge>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleEdit(vigilante)}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleDelete(vigilante)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
-          {vigilantes.length === 0 && (
-            <p className="text-center text-gray-500 py-8">
-              Nenhum vigilante encontrado
-            </p>
-          )}
-        </div>
-      </CardContent>
+      
+      <VigilanteForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        form={form}
+        onSubmit={onSubmit}
+        editingVigilante={editingVigilante}
+      />
+      
+      <VigilanteList
+        vigilantes={vigilantes}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </Card>
   );
 };
