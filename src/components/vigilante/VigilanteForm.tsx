@@ -16,7 +16,7 @@ interface VigilanteFormProps {
   editingVigilante: Vigilante | null;
 }
 
-const VigilanteForm = ({ open, onOpenChange, form, onSubmit, editingVigilante }: VigilanteFormProps) => {
+const VigilanteFormComponent = ({ open, onOpenChange, form, onSubmit, editingVigilante }: VigilanteFormProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -113,4 +113,4 @@ const VigilanteForm = ({ open, onOpenChange, form, onSubmit, editingVigilante }:
   );
 };
 
-export default VigilanteForm;
+export default VigilanteFormComponent;

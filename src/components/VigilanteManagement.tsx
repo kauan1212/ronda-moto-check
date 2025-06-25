@@ -9,8 +9,8 @@ import { Vigilante, Condominium } from '@/types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { vigilanteSchema, VigilanteForm } from './vigilante/vigilanteSchema';
-import VigilanteForm from './vigilante/VigilanteForm';
+import { vigilanteSchema, VigilanteForm as VigilanteFormData } from './vigilante/vigilanteSchema';
+import VigilanteFormComponent from './vigilante/VigilanteForm';
 import VigilanteList from './vigilante/VigilanteList';
 
 interface VigilanteManagementProps {
@@ -23,7 +23,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVigilante, setEditingVigilante] = useState<Vigilante | null>(null);
 
-  const form = useForm<VigilanteForm>({
+  const form = useForm<VigilanteFormData>({
     resolver: zodResolver(vigilanteSchema),
     defaultValues: {
       name: '',
@@ -33,7 +33,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
     }
   });
 
-  const onSubmit = async (values: VigilanteForm) => {
+  const onSubmit = async (values: VigilanteFormData) => {
     try {
       const vigilanteData = {
         name: values.name,
@@ -123,7 +123,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
         </div>
       </CardHeader>
       
-      <VigilanteForm
+      <VigilanteFormComponent
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         form={form}
