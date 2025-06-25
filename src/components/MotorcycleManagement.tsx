@@ -51,7 +51,12 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
   const onSubmit = async (values: MotorcycleForm) => {
     try {
       const motorcycleData = {
-        ...values,
+        plate: values.plate,
+        brand: values.brand,
+        model: values.model,
+        year: values.year,
+        color: values.color,
+        status: values.status,
         condominium_id: condominium.id,
       };
 
@@ -66,7 +71,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       } else {
         const { error } = await supabase
           .from('motorcycles')
-          .insert([motorcycleData]);
+          .insert(motorcycleData);
 
         if (error) throw error;
         toast.success('Motocicleta criada com sucesso!');

@@ -47,7 +47,10 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
   const onSubmit = async (values: VigilanteForm) => {
     try {
       const vigilanteData = {
-        ...values,
+        name: values.name,
+        email: values.email,
+        registration: values.registration,
+        status: values.status,
         condominium_id: condominium.id,
       };
 
@@ -62,7 +65,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
       } else {
         const { error } = await supabase
           .from('vigilantes')
-          .insert([vigilanteData]);
+          .insert(vigilanteData);
 
         if (error) throw error;
         toast.success('Vigilante criado com sucesso!');
