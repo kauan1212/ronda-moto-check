@@ -1,10 +1,30 @@
 
-import React from 'react';
-import Layout from '@/components/Layout';
+import React, { useState } from 'react';
+import { Condominium } from '@/types';
+import CondominiumSelector from '@/components/CondominiumSelector';
 import Dashboard from '@/components/Dashboard';
 
 const VigilanteDashboard = () => {
-  return <Dashboard onStartChecklist={() => window.location.href = '/vigilante/checklist'} />;
+  const [selectedCondominium, setSelectedCondominium] = useState<Condominium | null>(null);
+
+  const handleCondominiumSelect = (condominium: Condominium) => {
+    setSelectedCondominium(condominium);
+  };
+
+  const handleBack = () => {
+    setSelectedCondominium(null);
+  };
+
+  if (!selectedCondominium) {
+    return <CondominiumSelector onSelect={handleCondominiumSelect} />;
+  }
+
+  return (
+    <Dashboard 
+      selectedCondominium={selectedCondominium} 
+      onBack={handleBack}
+    />
+  );
 };
 
 export default VigilanteDashboard;
