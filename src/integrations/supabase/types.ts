@@ -157,75 +157,139 @@ export type Database = {
           photo_name?: string | null
           photo_url?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "checklist_photos_checklist_id_fkey"
-            columns: ["checklist_id"]
-            isOneToOne: false
-            referencedRelation: "checklists"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       checklists: {
         Row: {
-          brakes_condition: string | null
+          brakes_observation: string | null
+          brakes_status: string | null
+          cleaning_observation: string | null
+          cleaning_status: string | null
+          completed_at: string | null
+          coolant_observation: string | null
+          coolant_status: string | null
           created_at: string | null
-          documentation_condition: string | null
+          damages: string | null
+          electrical_observation: string | null
+          electrical_status: string | null
+          engine_oil_observation: string | null
+          engine_oil_status: string | null
+          face_photo: string | null
+          fuel_level: number | null
+          fuel_photos: string[] | null
           general_observations: string | null
           id: string
-          inspector_signature: string | null
-          lights_condition: string | null
-          oils_condition: string | null
-          renter_signature: string | null
-          tires_condition: string | null
-          updated_at: string | null
-          user_id: string
-          vehicle_brand: string
-          vehicle_km: string
-          vehicle_model: string
-          vehicle_plate: string
-          vehicle_year: string
+          km_photos: string[] | null
+          leaks_observation: string | null
+          leaks_status: string | null
+          lights_observation: string | null
+          lights_status: string | null
+          motorcycle_id: string | null
+          motorcycle_km: string | null
+          motorcycle_photos: string[] | null
+          motorcycle_plate: string
+          signature: string | null
+          status: string | null
+          suspension_observation: string | null
+          suspension_status: string | null
+          tires_observation: string | null
+          tires_status: string | null
+          type: string
+          vigilante_id: string | null
+          vigilante_name: string
         }
         Insert: {
-          brakes_condition?: string | null
+          brakes_observation?: string | null
+          brakes_status?: string | null
+          cleaning_observation?: string | null
+          cleaning_status?: string | null
+          completed_at?: string | null
+          coolant_observation?: string | null
+          coolant_status?: string | null
           created_at?: string | null
-          documentation_condition?: string | null
+          damages?: string | null
+          electrical_observation?: string | null
+          electrical_status?: string | null
+          engine_oil_observation?: string | null
+          engine_oil_status?: string | null
+          face_photo?: string | null
+          fuel_level?: number | null
+          fuel_photos?: string[] | null
           general_observations?: string | null
           id?: string
-          inspector_signature?: string | null
-          lights_condition?: string | null
-          oils_condition?: string | null
-          renter_signature?: string | null
-          tires_condition?: string | null
-          updated_at?: string | null
-          user_id: string
-          vehicle_brand: string
-          vehicle_km: string
-          vehicle_model: string
-          vehicle_plate: string
-          vehicle_year: string
+          km_photos?: string[] | null
+          leaks_observation?: string | null
+          leaks_status?: string | null
+          lights_observation?: string | null
+          lights_status?: string | null
+          motorcycle_id?: string | null
+          motorcycle_km?: string | null
+          motorcycle_photos?: string[] | null
+          motorcycle_plate: string
+          signature?: string | null
+          status?: string | null
+          suspension_observation?: string | null
+          suspension_status?: string | null
+          tires_observation?: string | null
+          tires_status?: string | null
+          type: string
+          vigilante_id?: string | null
+          vigilante_name: string
         }
         Update: {
-          brakes_condition?: string | null
+          brakes_observation?: string | null
+          brakes_status?: string | null
+          cleaning_observation?: string | null
+          cleaning_status?: string | null
+          completed_at?: string | null
+          coolant_observation?: string | null
+          coolant_status?: string | null
           created_at?: string | null
-          documentation_condition?: string | null
+          damages?: string | null
+          electrical_observation?: string | null
+          electrical_status?: string | null
+          engine_oil_observation?: string | null
+          engine_oil_status?: string | null
+          face_photo?: string | null
+          fuel_level?: number | null
+          fuel_photos?: string[] | null
           general_observations?: string | null
           id?: string
-          inspector_signature?: string | null
-          lights_condition?: string | null
-          oils_condition?: string | null
-          renter_signature?: string | null
-          tires_condition?: string | null
-          updated_at?: string | null
-          user_id?: string
-          vehicle_brand?: string
-          vehicle_km?: string
-          vehicle_model?: string
-          vehicle_plate?: string
-          vehicle_year?: string
+          km_photos?: string[] | null
+          leaks_observation?: string | null
+          leaks_status?: string | null
+          lights_observation?: string | null
+          lights_status?: string | null
+          motorcycle_id?: string | null
+          motorcycle_km?: string | null
+          motorcycle_photos?: string[] | null
+          motorcycle_plate?: string
+          signature?: string | null
+          status?: string | null
+          suspension_observation?: string | null
+          suspension_status?: string | null
+          tires_observation?: string | null
+          tires_status?: string | null
+          type?: string
+          vigilante_id?: string | null
+          vigilante_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "checklists_motorcycle_id_fkey"
+            columns: ["motorcycle_id"]
+            isOneToOne: false
+            referencedRelation: "motorcycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklists_vigilante_id_fkey"
+            columns: ["vigilante_id"]
+            isOneToOne: false
+            referencedRelation: "vigilantes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_access_tokens: {
         Row: {
@@ -365,34 +429,37 @@ export type Database = {
       }
       motorcycles: {
         Row: {
-          chassis: string
+          brand: string
           color: string
           created_at: string | null
-          engine: string
           id: string
           model: string
           plate: string
-          renavam: string
+          status: string | null
+          updated_at: string | null
+          year: number
         }
         Insert: {
-          chassis: string
+          brand: string
           color: string
           created_at?: string | null
-          engine: string
           id?: string
           model: string
           plate: string
-          renavam: string
+          status?: string | null
+          updated_at?: string | null
+          year: number
         }
         Update: {
-          chassis?: string
+          brand?: string
           color?: string
           created_at?: string | null
-          engine?: string
           id?: string
           model?: string
           plate?: string
-          renavam?: string
+          status?: string | null
+          updated_at?: string | null
+          year?: number
         }
         Relationships: []
       }
@@ -742,6 +809,36 @@ export type Database = {
           updated_at?: string
           user_id?: string
           whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      vigilantes: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          registration: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          registration: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          registration?: string
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

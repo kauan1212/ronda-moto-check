@@ -32,12 +32,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
-    // Simular autenticação
-    if (email === 'admin@condominio.com' && password === 'admin123') {
+    // Apenas admin pode fazer login
+    if (email === 'admin@locauto.com' && password === 'admin123') {
       const adminUser: User = {
         id: '1',
-        name: 'Administrador',
-        email: 'admin@condominio.com',
+        name: 'Administrador LocAuto',
+        email: 'admin@locauto.com',
         role: 'admin',
         registration: 'ADM-001',
         status: 'active',
@@ -45,22 +45,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
       setUser(adminUser);
       localStorage.setItem('user', JSON.stringify(adminUser));
-      setIsLoading(false);
-      return true;
-    }
-    
-    if (email === 'vigilante@condominio.com' && password === 'vigilante123') {
-      const vigilanteUser: User = {
-        id: '2',
-        name: 'João Silva',
-        email: 'vigilante@condominio.com',
-        role: 'vigilante',
-        registration: 'VIG-001',
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
-      setUser(vigilanteUser);
-      localStorage.setItem('user', JSON.stringify(vigilanteUser));
       setIsLoading(false);
       return true;
     }

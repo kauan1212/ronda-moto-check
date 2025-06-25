@@ -9,8 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import AdminDashboard from "./pages/AdminDashboard";
-import VigilanteDashboard from "./pages/VigilanteDashboard";
-import ChecklistForm from "./components/ChecklistForm";
+import VigilanteChecklistPage from "./pages/VigilanteChecklistPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,20 +33,8 @@ const App = () => (
                 } 
               />
               <Route 
-                path="/vigilante" 
-                element={
-                  <ProtectedRoute requiredRole="vigilante">
-                    <VigilanteDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/vigilante/checklist" 
-                element={
-                  <ProtectedRoute requiredRole="vigilante">
-                    <ChecklistForm onBack={() => window.history.back()} />
-                  </ProtectedRoute>
-                } 
+                path="/vigilante-checklist" 
+                element={<VigilanteChecklistPage />} 
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
