@@ -66,10 +66,25 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   const onSubmit = async (values: CondominiumForm) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error('Você precisa estar logado para realizar esta ação');
+        return;
+      }
+
+      const condominiumData = {
+        name: values.name,
+        address: values.address || null,
+        phone: values.phone || null,
+        email: values.email || null,
+        user_id: user.id
+      };
+
       if (editingCondominium) {
         const { error } = await supabase
           .from('condominiums')
-          .update(values)
+          .update(condominiumData)
           .eq('id', editingCondominium.id);
 
         if (error) throw error;
@@ -77,7 +92,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       } else {
         const { error } = await supabase
           .from('condominiums')
-          .insert([values]);
+          .insert([condominiumData]);
 
         if (error) throw error;
         toast.success('Condomínio criado com sucesso!');

@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,12 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, onBack }: LayoutProps) => {
+  const { signOut, profile } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="bg-white shadow-sm border-b">
@@ -40,6 +47,12 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
             </div>
             
             <div className="flex items-center gap-2">
+              {profile && (
+                <span className="text-sm text-slate-600 mr-2">
+                  {profile.full_name} ({profile.role})
+                </span>
+              )}
+              
               <Button 
                 onClick={() => window.location.href = '/vigilante-checklist'}
                 className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
@@ -48,6 +61,16 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Área do Vigilante</span>
                 <span className="sm:hidden">Vigilante</span>
+              </Button>
+              
+              <Button 
+                onClick={handleSignOut}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>
