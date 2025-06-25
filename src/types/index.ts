@@ -14,7 +14,7 @@ export interface Vigilante {
   name: string;
   email: string;
   registration: string;
-  status: 'active' | 'inactive';
+  status: string; // Changed from literal union to string
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +26,7 @@ export interface Motorcycle {
   year: number;
   plate: string;
   color: string;
-  status: 'available' | 'in_use' | 'maintenance';
+  status: string; // Changed from literal union to string
   created_at: string;
   updated_at: string;
 }
@@ -42,27 +42,27 @@ export interface Checklist {
   vigilante_name: string;
   motorcycle_id: string;
   motorcycle_plate: string;
-  type: 'start' | 'end';
+  type: string; // Changed from literal union to string
   
   face_photo?: string;
   
-  tires_status?: 'good' | 'regular' | 'needs_repair';
+  tires_status?: string; // Changed from literal union to string
   tires_observation?: string;
-  brakes_status?: 'good' | 'regular' | 'needs_repair';
+  brakes_status?: string; // Changed from literal union to string
   brakes_observation?: string;
-  engine_oil_status?: 'good' | 'regular' | 'needs_repair';
+  engine_oil_status?: string; // Changed from literal union to string
   engine_oil_observation?: string;
-  coolant_status?: 'good' | 'regular' | 'needs_repair';
+  coolant_status?: string; // Changed from literal union to string
   coolant_observation?: string;
-  lights_status?: 'good' | 'regular' | 'needs_repair';
+  lights_status?: string; // Changed from literal union to string
   lights_observation?: string;
-  electrical_status?: 'good' | 'regular' | 'needs_repair';
+  electrical_status?: string; // Changed from literal union to string
   electrical_observation?: string;
-  suspension_status?: 'good' | 'regular' | 'needs_repair';
+  suspension_status?: string; // Changed from literal union to string
   suspension_observation?: string;
-  cleaning_status?: 'good' | 'regular' | 'needs_repair';
+  cleaning_status?: string; // Changed from literal union to string
   cleaning_observation?: string;
-  leaks_status?: 'good' | 'regular' | 'needs_repair';
+  leaks_status?: string; // Changed from literal union to string
   leaks_observation?: string;
   
   motorcycle_photos: string[];
@@ -75,7 +75,7 @@ export interface Checklist {
   damages: string;
   signature?: string;
   
-  status: 'pending' | 'completed' | 'sent';
+  status: string; // Changed from literal union to string
   created_at: string;
   completed_at?: string;
 }
