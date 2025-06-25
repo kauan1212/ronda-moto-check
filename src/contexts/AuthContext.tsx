@@ -38,41 +38,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, is_admin')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      if (profileData) {
+        const mappedProfile: Profile = {
+          id: profileData.id,
+          email: profileData.email || '',
+          full_name: profileData.full_name || '',
+          role: profileData.is_admin ? 'admin' : 'vigilante',
+          condominium_id: null
+        };
+        return mappedProfile;
+      }
+    } catch (error) {
+      console.error('Error in profile fetch:', error);
+    }
+    return null;
+  };
+
   useEffect(() => {
+    let mounted = true;
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth event:', event);
+        
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile with actual database columns
+          // Use setTimeout to avoid recursion issues
           setTimeout(async () => {
-            try {
-              const { data: profileData, error } = await supabase
-                .from('profiles')
-                .select('id, email, full_name, is_admin')
-                .eq('id', session.user.id)
-                .single();
-              
-              if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching profile:', error);
-              } else if (profileData) {
-                // Map the database structure to our interface
-                const mappedProfile: Profile = {
-                  id: profileData.id,
-                  email: profileData.email || '',
-                  full_name: profileData.full_name || '',
-                  role: profileData.is_admin ? 'admin' : 'vigilante',
-                  condominium_id: null // Will be set when we implement condominium assignment
-                };
-                setProfile(mappedProfile);
+            if (mounted) {
+              const userProfile = await fetchUserProfile(session.user.id);
+              if (mounted) {
+                setProfile(userProfile);
               }
-            } catch (error) {
-              console.error('Error in profile fetch:', error);
             }
-          }, 0);
+          }, 100);
         } else {
           setProfile(null);
         }
@@ -82,13 +99,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          if (session?.user) {
+            const userProfile = await fetchUserProfile(session.user.id);
+            if (mounted) {
+              setProfile(userProfile);
+            }
+          }
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -105,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Email ou senha incorretos';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada';
+          errorMessage = 'Email não confirmado. Entre em contato com o administrador';
         } else if (error.message.includes('Too many requests')) {
           errorMessage = 'Muitas tentativas. Tente novamente em alguns minutos';
         }
@@ -127,13 +166,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
       
+      // Signup without email confirmation
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
           },
@@ -154,11 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error(errorMessage);
         return { error };
       } else {
-        if (data.user && !data.user.email_confirmed_at) {
-          toast.success('Conta criada! Verifique seu email para confirmar a conta.');
-        } else {
-          toast.success('Conta criada com sucesso!');
-        }
+        toast.success('Conta criada com sucesso! Você já pode fazer login.');
         return { error: null };
       }
     } catch (error) {

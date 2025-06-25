@@ -202,13 +202,6 @@ const AuthPage = () => {
                     {loading ? 'Entrando...' : 'Entrar'}
                   </Button>
                 </form>
-
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Se você não recebeu o email de confirmação, verifique sua pasta de spam ou entre em contato com o administrador.
-                  </AlertDescription>
-                </Alert>
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4">
@@ -328,7 +321,7 @@ const AuthPage = () => {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Após criar sua conta, você receberá um email de confirmação. Verifique sua caixa de entrada e pasta de spam.
+                    Sua conta será criada instantaneamente, sem necessidade de confirmação por email.
                   </AlertDescription>
                 </Alert>
               </TabsContent>
