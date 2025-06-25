@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,14 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail, Shield } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium } from '@/types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '@/contexts/AuthContext';
 
 const condominiumSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome deve ter no máximo 100 caracteres'),
@@ -28,7 +28,6 @@ interface CondominiumManagementProps {
 }
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
-  const { profile, user } = useAuth();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -45,20 +44,12 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   });
 
   useEffect(() => {
-    if (user && profile) {
-      fetchCondominiums();
-    }
-  }, [user, profile]);
+    fetchCondominiums();
+  }, []);
 
   const fetchCondominiums = async () => {
     try {
-      if (!user) {
-        console.error('No authenticated user');
-        toast.error('Usuário não autenticado');
-        return;
-      }
-
-      console.log('Fetching condominiums for user:', user.id, 'role:', profile?.role);
+      console.log('Fetching condominiums...');
       
       const { data, error } = await supabase
         .from('condominiums')
@@ -83,16 +74,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   const onSubmit = async (values: CondominiumForm) => {
     try {
-      if (!user) {
-        toast.error('Você precisa estar logado para realizar esta ação');
-        return;
-      }
-
-      if (profile?.role !== 'admin') {
-        toast.error('Apenas administradores podem gerenciar condomínios');
-        return;
-      }
-
       // Sanitize input data
       const condominiumData = {
         name: values.name.trim(),
@@ -137,11 +118,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   };
 
   const handleEdit = (condominium: Condominium) => {
-    if (profile?.role !== 'admin') {
-      toast.error('Apenas administradores podem editar condomínios');
-      return;
-    }
-
     setEditingCondominium(condominium);
     form.reset({
       name: condominium.name,
@@ -153,11 +129,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   };
 
   const handleDelete = async (condominium: Condominium) => {
-    if (profile?.role !== 'admin') {
-      toast.error('Apenas administradores podem excluir condomínios');
-      return;
-    }
-
     if (!confirm(`Tem certeza que deseja excluir o condomínio "${condominium.name}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
@@ -186,8 +157,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     setEditingCondominium(null);
     form.reset();
   };
-
-  const isAdmin = profile?.role === 'admin';
 
   if (loading) {
     return (
@@ -218,107 +187,98 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
             Gerencie e selecione o condomínio para acessar o painel administrativo
           </p>
           
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Shield className="h-4 w-4 text-slate-500" />
-            <span className="text-sm text-slate-500">
-              Logado como: {profile?.full_name} ({profile?.role === 'admin' ? 'Administrador' : 'Vigilante'})
-            </span>
+          <div className="flex justify-center mb-6">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Condomínio
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingCondominium ? 'Editar Condomínio' : 'Novo Condomínio'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingCondominium 
+                      ? 'Atualize as informações do condomínio' 
+                      : 'Preencha as informações do novo condomínio'
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome do condomínio" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Endereço</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Endereço completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(11) 99999-9999" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="contato@condominio.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button type="button" variant="outline" onClick={handleDialogClose}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                        {editingCondominium ? 'Atualizar' : 'Criar'}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
-          
-          {isAdmin && (
-            <div className="flex justify-center mb-6">
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Condomínio
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingCondominium ? 'Editar Condomínio' : 'Novo Condomínio'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingCondominium 
-                        ? 'Atualize as informações do condomínio' 
-                        : 'Preencha as informações do novo condomínio'
-                      }
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome do condomínio" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Endereço</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Endereço completo" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="(11) 99999-9999" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="contato@condominio.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={handleDialogClose}>
-                          Cancelar
-                        </Button>
-                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                          {editingCondominium ? 'Atualizar' : 'Criar'}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -333,24 +293,22 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                     <Building2 className="h-5 w-5 mr-2 text-blue-600" />
                     {condominium.name}
                   </div>
-                  {isAdmin && (
-                    <div className="flex gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleEdit(condominium)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDelete(condominium)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleEdit(condominium)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleDelete(condominium)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -389,7 +347,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                 Nenhum condomínio cadastrado
               </h3>
               <p className="text-slate-500 mb-4">
-                {isAdmin ? 'Comece criando seu primeiro condomínio' : 'Aguarde um administrador configurar os condomínios'}
+                Comece criando seu primeiro condomínio
               </p>
             </div>
           )}
