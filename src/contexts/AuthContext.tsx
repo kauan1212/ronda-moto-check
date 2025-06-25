@@ -42,56 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching profile for user:', userId);
       
-      // Primeiro tenta buscar na tabela profiles
+      // Try to fetch from profiles table with new RLS policies
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, full_name, is_admin')
         .eq('id', userId)
         .single();
       
-      if (profileError) {
-        console.log('Profile not found in profiles table, creating one...');
-        
-        // Se não encontrar, cria um profile básico
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          const newProfile = {
-            id: userId,
-            email: userData.user.email || '',
-            full_name: userData.user.user_metadata?.full_name || 'Usuário',
-            is_admin: true // Por padrão será admin
-          };
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching profile:', profileError);
+        throw profileError;
+      }
 
-          const { data: createdProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([newProfile])
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            // Se não conseguir criar, retorna um profile padrão
-            return {
-              id: userId,
-              email: userData.user.email || '',
-              full_name: userData.user.user_metadata?.full_name || 'Usuário',
-              role: 'admin' as const,
-              condominium_id: null
-            };
-          }
-
-          const mappedProfile: Profile = {
-            id: createdProfile.id,
-            email: createdProfile.email || '',
-            full_name: createdProfile.full_name || '',
-            role: createdProfile.is_admin ? 'admin' : 'vigilante',
-            condominium_id: null
-          };
-          
-          console.log('Created new profile:', mappedProfile);
-          return mappedProfile;
-        }
-      } else if (profileData) {
+      if (profileData) {
         const mappedProfile: Profile = {
           id: profileData.id,
           email: profileData.email || '',
@@ -100,25 +63,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           condominium_id: null
         };
         
-        console.log('Found existing profile:', mappedProfile);
+        console.log('Found profile:', mappedProfile);
         return mappedProfile;
       }
+
+      // If no profile found, return null - the trigger should have created one
+      console.log('No profile found for user');
+      return null;
     } catch (error) {
       console.error('Error in profile fetch:', error);
-      
-      // Em caso de erro, retorna um profile padrão para não bloquear o acesso
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        return {
-          id: userId,
-          email: userData.user.email || '',
-          full_name: userData.user.user_metadata?.full_name || 'Usuário',
-          role: 'admin' as const,
-          condominium_id: null
-        };
-      }
+      return null;
     }
-    return null;
   };
 
   useEffect(() => {
@@ -136,11 +91,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user) {
           console.log('User logged in, fetching profile...');
-          const userProfile = await fetchUserProfile(session.user.id);
-          if (mounted) {
-            setProfile(userProfile);
-            console.log('Profile set:', userProfile);
-          }
+          // Add a small delay to ensure the trigger has time to create the profile
+          setTimeout(async () => {
+            if (mounted) {
+              const userProfile = await fetchUserProfile(session.user.id);
+              if (mounted) {
+                setProfile(userProfile);
+                console.log('Profile set:', userProfile);
+              }
+            }
+          }, 100);
         } else {
           setProfile(null);
           console.log('User logged out, profile cleared');
@@ -191,8 +151,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('Attempting to sign in...');
       
+      // Validate input
+      if (!email?.trim() || !password?.trim()) {
+        toast.error('Email e senha são obrigatórios');
+        return { error: new Error('Missing credentials') };
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
       
@@ -229,12 +195,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('Attempting to sign up...');
       
+      // Enhanced input validation
+      if (!email?.trim() || !password?.trim() || !fullName?.trim()) {
+        toast.error('Todos os campos são obrigatórios');
+        return { error: new Error('Missing required fields') };
+      }
+
+      if (password.length < 6) {
+        toast.error('A senha deve ter pelo menos 6 caracteres');
+        return { error: new Error('Password too short') };
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        toast.error('Email inválido');
+        return { error: new Error('Invalid email') };
+      }
+      
       const { error, data } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
           },
         },
       });
@@ -272,12 +256,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Signing out...');
       const { error } = await supabase.auth.signOut();
       if (error) {
+        console.error('Sign out error:', error);
         toast.error('Erro ao fazer logout');
       } else {
         toast.success('Logout realizado com sucesso!');
         setProfile(null);
       }
     } catch (error) {
+      console.error('Unexpected sign out error:', error);
       toast.error('Erro inesperado ao fazer logout');
     }
   };
