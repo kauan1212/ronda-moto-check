@@ -53,108 +53,363 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
     }
   };
 
+  const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Erro ao converter imagem para base64:', error);
+      return '';
+    }
+  };
+
   const downloadChecklistPDF = async (checklist: Checklist) => {
     try {
-      // Criar conteúdo HTML para PDF
+      toast.info('Gerando relatório... Por favor aguarde.');
+      
+      // Converter todas as imagens para base64
+      const facePhotoBase64 = checklist.face_photo ? await convertImageToBase64(checklist.face_photo) : '';
+      const signatureBase64 = checklist.signature ? await convertImageToBase64(checklist.signature) : '';
+      
+      const motorcyclePhotosBase64 = await Promise.all(
+        (checklist.motorcycle_photos || []).map(url => convertImageToBase64(url))
+      );
+      
+      const fuelPhotosBase64 = await Promise.all(
+        (checklist.fuel_photos || []).map(url => convertImageToBase64(url))
+      );
+      
+      const kmPhotosBase64 = await Promise.all(
+        (checklist.km_photos || []).map(url => convertImageToBase64(url))
+      );
+
+      // Criar conteúdo HTML melhorado para PDF
       const htmlContent = `
+        <!DOCTYPE html>
         <html>
           <head>
             <meta charset="UTF-8">
             <title>Checklist de Vistoria - ${checklist.motorcycle_plate}</title>
             <style>
-              body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-              .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-              .section { margin-bottom: 25px; }
-              .item { margin-bottom: 15px; padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; }
-              .status-good { border-left-color: #28a745; }
-              .status-regular { border-left-color: #ffc107; }
-              .status-repair { border-left-color: #dc3545; }
-              .signature { margin-top: 50px; text-align: center; }
-              img { max-width: 200px; margin: 10px; }
-              h1, h2 { color: #333; }
-              .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+              @page {
+                size: A4;
+                margin: 20mm;
+              }
+              
+              body { 
+                font-family: 'Arial', sans-serif; 
+                margin: 0; 
+                padding: 0;
+                line-height: 1.4; 
+                color: #333;
+                font-size: 12px;
+              }
+              
+              .header { 
+                text-align: center; 
+                border-bottom: 3px solid #2563eb; 
+                padding-bottom: 20px; 
+                margin-bottom: 30px;
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                padding: 20px;
+                border-radius: 8px;
+              }
+              
+              .header h1 { 
+                color: #1e40af; 
+                margin: 0 0 10px 0; 
+                font-size: 24px;
+                font-weight: bold;
+              }
+              
+              .header h2 { 
+                color: #3730a3; 
+                margin: 0 0 15px 0; 
+                font-size: 18px;
+              }
+              
+              .info-grid { 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 20px; 
+                margin-bottom: 30px; 
+              }
+              
+              .info-box {
+                background: #f8fafc;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #2563eb;
+              }
+              
+              .info-box h3 {
+                margin: 0 0 10px 0;
+                color: #1e40af;
+                font-size: 14px;
+                font-weight: bold;
+              }
+              
+              .info-box p {
+                margin: 5px 0;
+                font-size: 12px;
+              }
+              
+              .section { 
+                margin-bottom: 25px; 
+                page-break-inside: avoid;
+              }
+              
+              .section h3 {
+                color: #1e40af;
+                border-bottom: 2px solid #e2e8f0;
+                padding-bottom: 8px;
+                margin-bottom: 15px;
+                font-size: 16px;
+              }
+              
+              .item { 
+                margin-bottom: 12px; 
+                padding: 12px; 
+                border-radius: 6px;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+              }
+              
+              .item-header {
+                display: flex;
+                justify-content: between;
+                align-items: center;
+                margin-bottom: 8px;
+              }
+              
+              .item-title {
+                font-weight: bold;
+                color: #374151;
+                font-size: 13px;
+              }
+              
+              .status-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                text-transform: uppercase;
+              }
+              
+              .status-good { 
+                background: #dcfce7;
+                color: #166534;
+                border: 1px solid #bbf7d0;
+              }
+              
+              .status-regular { 
+                background: #fef3c7;
+                color: #92400e;
+                border: 1px solid #fde68a;
+              }
+              
+              .status-repair { 
+                background: #fee2e2;
+                color: #dc2626;
+                border: 1px solid #fecaca;
+              }
+              
+              .observation {
+                font-style: italic;
+                color: #6b7280;
+                margin-top: 8px;
+                padding: 8px;
+                background: #f9fafb;
+                border-radius: 4px;
+                font-size: 11px;
+              }
+              
+              .photos-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 15px 0;
+              }
+              
+              .photo-container {
+                text-align: center;
+                page-break-inside: avoid;
+              }
+              
+              .photo-container img { 
+                max-width: 100%; 
+                max-height: 200px;
+                border-radius: 6px;
+                border: 2px solid #e5e7eb;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              
+              .photo-label {
+                margin-top: 8px;
+                font-size: 11px;
+                color: #6b7280;
+                font-weight: bold;
+              }
+              
+              .signature-section { 
+                margin-top: 40px; 
+                text-align: center;
+                page-break-inside: avoid;
+              }
+              
+              .signature-section h3 {
+                color: #1e40af;
+                margin-bottom: 20px;
+              }
+              
+              .signature-section img {
+                max-width: 300px;
+                border: 2px solid #d1d5db;
+                border-radius: 8px;
+                background: white;
+                padding: 10px;
+              }
+              
+              .face-photo {
+                float: right;
+                margin: 0 0 20px 20px;
+                max-width: 150px;
+                border-radius: 8px;
+                border: 2px solid #2563eb;
+              }
+              
+              @media print {
+                .page-break { page-break-before: always; }
+                body { print-color-adjust: exact; }
+              }
             </style>
           </head>
           <body>
             <div class="header">
-              <h1>Relatório de Vistoria</h1>
+              <h1>Relatório de Vistoria de Motocicleta</h1>
               <h2>${selectedCondominium.name}</h2>
-              <p><strong>Motocicleta:</strong> ${checklist.motorcycle_plate}</p>
-              <p><strong>Vigilante:</strong> ${checklist.vigilante_name}</p>
-              <p><strong>Tipo:</strong> ${checklist.type === 'start' ? 'Início do Turno' : 'Fim do Turno'}</p>
-              <p><strong>Data:</strong> ${format(new Date(checklist.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                <div>
+                  <strong>Motocicleta:</strong> ${checklist.motorcycle_plate}<br>
+                  <strong>Tipo:</strong> ${checklist.type === 'start' ? 'Início do Turno' : 'Fim do Turno'}
+                </div>
+                ${facePhotoBase64 ? `<img src="${facePhotoBase64}" alt="Foto do Vigilante" class="face-photo" />` : ''}
+              </div>
             </div>
 
             <div class="info-grid">
-              <div>
-                <h3>Informações da Vistoria</h3>
-                <p><strong>Quilometragem:</strong> ${checklist.motorcycle_km || 'Não informado'}</p>
-                <p><strong>Nível de Combustível:</strong> ${checklist.fuel_level || 0}%</p>
+              <div class="info-box">
+                <h3>Informações do Vigilante</h3>
+                <p><strong>Nome:</strong> ${checklist.vigilante_name}</p>
+                <p><strong>Data da Vistoria:</strong> ${format(new Date(checklist.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+                ${checklist.completed_at ? `<p><strong>Concluído em:</strong> ${format(new Date(checklist.completed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>` : ''}
               </div>
-              <div>
-                <h3>Status Geral</h3>
-                <p><strong>Status:</strong> ${checklist.status}</p>
-                <p><strong>Concluído em:</strong> ${checklist.completed_at ? format(new Date(checklist.completed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Não concluído'}</p>
+              <div class="info-box">
+                <h3>Dados da Motocicleta</h3>
+                <p><strong>Quilometragem:</strong> ${checklist.motorcycle_km || 'Não informado'} km</p>
+                <p><strong>Nível de Combustível:</strong> ${checklist.fuel_level || 0}%</p>
+                <p><strong>Status da Vistoria:</strong> ${checklist.status}</p>
               </div>
             </div>
 
             <div class="section">
-              <h3>Itens Verificados</h3>
+              <h3>Itens Verificados na Vistoria</h3>
               
-              ${checklist.tires_status ? `
-                <div class="item status-${checklist.tires_status === 'good' ? 'good' : checklist.tires_status === 'regular' ? 'regular' : 'repair'}">
-                  <strong>Pneus:</strong> ${checklist.tires_status === 'good' ? 'Bom' : checklist.tires_status === 'regular' ? 'Regular' : 'Precisa Reparo'}
-                  ${checklist.tires_observation ? `<br><em>Observação: ${checklist.tires_observation}</em>` : ''}
+              ${[
+                { label: 'Pneus', status: checklist.tires_status, obs: checklist.tires_observation },
+                { label: 'Freios', status: checklist.brakes_status, obs: checklist.brakes_observation },
+                { label: 'Óleo do Motor', status: checklist.engine_oil_status, obs: checklist.engine_oil_observation },
+                { label: 'Sistema de Arrefecimento', status: checklist.coolant_status, obs: checklist.coolant_observation },
+                { label: 'Sistema de Iluminação', status: checklist.lights_status, obs: checklist.lights_observation },
+                { label: 'Sistema Elétrico', status: checklist.electrical_status, obs: checklist.electrical_observation },
+                { label: 'Suspensão', status: checklist.suspension_status, obs: checklist.suspension_observation },
+                { label: 'Limpeza Geral', status: checklist.cleaning_status, obs: checklist.cleaning_observation },
+                { label: 'Vazamentos', status: checklist.leaks_status, obs: checklist.leaks_observation }
+              ].filter(item => item.status).map(item => `
+                <div class="item">
+                  <div class="item-header">
+                    <span class="item-title">${item.label}</span>
+                    <span class="status-badge status-${item.status === 'good' ? 'good' : item.status === 'regular' ? 'regular' : 'repair'}">
+                      ${item.status === 'good' ? 'BOM' : item.status === 'regular' ? 'REGULAR' : 'PRECISA REPARO'}
+                    </span>
+                  </div>
+                  ${item.obs ? `<div class="observation"><strong>Observação:</strong> ${item.obs}</div>` : ''}
                 </div>
-              ` : ''}
-
-              ${checklist.brakes_status ? `
-                <div class="item status-${checklist.brakes_status === 'good' ? 'good' : checklist.brakes_status === 'regular' ? 'regular' : 'repair'}">
-                  <strong>Freios:</strong> ${checklist.brakes_status === 'good' ? 'Bom' : checklist.brakes_status === 'regular' ? 'Regular' : 'Precisa Reparo'}
-                  ${checklist.brakes_observation ? `<br><em>Observação: ${checklist.brakes_observation}</em>` : ''}
-                </div>
-              ` : ''}
-
-              ${checklist.engine_oil_status ? `
-                <div class="item status-${checklist.engine_oil_status === 'good' ? 'good' : checklist.engine_oil_status === 'regular' ? 'regular' : 'repair'}">
-                  <strong>Óleo do Motor:</strong> ${checklist.engine_oil_status === 'good' ? 'Bom' : checklist.engine_oil_status === 'regular' ? 'Regular' : 'Precisa Reparo'}
-                  ${checklist.engine_oil_observation ? `<br><em>Observação: ${checklist.engine_oil_observation}</em>` : ''}
-                </div>
-              ` : ''}
-
-              ${checklist.lights_status ? `
-                <div class="item status-${checklist.lights_status === 'good' ? 'good' : checklist.lights_status === 'regular' ? 'regular' : 'repair'}">
-                  <strong>Luzes:</strong> ${checklist.lights_status === 'good' ? 'Bom' : checklist.lights_status === 'regular' ? 'Regular' : 'Precisa Reparo'}
-                  ${checklist.lights_observation ? `<br><em>Observação: ${checklist.lights_observation}</em>` : ''}
-                </div>
-              ` : ''}
-
-              ${checklist.electrical_status ? `
-                <div class="item status-${checklist.electrical_status === 'good' ? 'good' : checklist.electrical_status === 'regular' ? 'regular' : 'repair'}">
-                  <strong>Sistema Elétrico:</strong> ${checklist.electrical_status === 'good' ? 'Bom' : checklist.electrical_status === 'regular' ? 'Regular' : 'Precisa Reparo'}
-                  ${checklist.electrical_observation ? `<br><em>Observação: ${checklist.electrical_observation}</em>` : ''}
-                </div>
-              ` : ''}
+              `).join('')}
             </div>
+
+            ${motorcyclePhotosBase64.length > 0 ? `
+              <div class="section page-break">
+                <h3>Fotos da Motocicleta</h3>
+                <div class="photos-grid">
+                  ${motorcyclePhotosBase64.map((photo, index) => `
+                    <div class="photo-container">
+                      <img src="${photo}" alt="Foto da Motocicleta ${index + 1}" />
+                      <div class="photo-label">Motocicleta - Foto ${index + 1}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${fuelPhotosBase64.length > 0 ? `
+              <div class="section">
+                <h3>Fotos do Nível de Combustível</h3>
+                <div class="photos-grid">
+                  ${fuelPhotosBase64.map((photo, index) => `
+                    <div class="photo-container">
+                      <img src="${photo}" alt="Foto do Combustível ${index + 1}" />
+                      <div class="photo-label">Combustível - Foto ${index + 1}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${kmPhotosBase64.length > 0 ? `
+              <div class="section">
+                <h3>Fotos da Quilometragem</h3>
+                <div class="photos-grid">
+                  ${kmPhotosBase64.map((photo, index) => `
+                    <div class="photo-container">
+                      <img src="${photo}" alt="Foto da Quilometragem ${index + 1}" />
+                      <div class="photo-label">Quilometragem - Foto ${index + 1}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
 
             ${checklist.general_observations ? `
               <div class="section">
                 <h3>Observações Gerais</h3>
-                <p>${checklist.general_observations}</p>
+                <div style="padding: 15px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #2563eb;">
+                  ${checklist.general_observations}
+                </div>
               </div>
             ` : ''}
 
             ${checklist.damages ? `
               <div class="section">
                 <h3>Danos Reportados</h3>
-                <p>${checklist.damages}</p>
+                <div style="padding: 15px; background: #fee2e2; border-radius: 8px; border-left: 4px solid #dc2626; color: #7f1d1d;">
+                  ${checklist.damages}
+                </div>
               </div>
             ` : ''}
 
-            ${checklist.signature ? `
-              <div class="signature">
+            ${signatureBase64 ? `
+              <div class="signature-section page-break">
                 <h3>Assinatura do Vigilante</h3>
-                <img src="${checklist.signature}" alt="Assinatura" />
+                <img src="${signatureBase64}" alt="Assinatura do Vigilante" />
+                <p style="margin-top: 15px; color: #6b7280; font-size: 11px;">
+                  Documento gerado automaticamente em ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                </p>
               </div>
             ` : ''}
           </body>
@@ -166,15 +421,15 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `checklist-${checklist.motorcycle_plate}-${format(new Date(checklist.created_at), 'dd-MM-yyyy-HH-mm')}.html`;
+      link.download = `vistoria-${checklist.motorcycle_plate}-${format(new Date(checklist.created_at), 'dd-MM-yyyy-HH-mm')}.html`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success('Relatório baixado com sucesso!');
+      toast.success('Relatório gerado com sucesso!');
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+      console.error('Erro ao gerar relatório:', error);
       toast.error('Erro ao gerar relatório');
     }
   };
@@ -267,6 +522,23 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
                   ))}
                 </div>
               </div>
+
+              {/* Fotos */}
+              {selectedChecklist.motorcycle_photos && selectedChecklist.motorcycle_photos.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-lg mb-2">Fotos da Motocicleta</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {selectedChecklist.motorcycle_photos.map((photo, index) => (
+                      <img 
+                        key={index}
+                        src={photo} 
+                        alt={`Foto da motocicleta ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Observações */}
               {selectedChecklist.general_observations && (

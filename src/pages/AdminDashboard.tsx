@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Condominium } from '@/types';
-import CondominiumSelector from '@/components/CondominiumSelector';
+import CondominiumManagement from '@/components/CondominiumManagement';
 import Dashboard from '@/components/Dashboard';
 
 const AdminDashboard = () => {
@@ -16,7 +16,7 @@ const AdminDashboard = () => {
   };
 
   if (!selectedCondominium) {
-    return <CondominiumSelector onSelect={handleCondominiumSelect} />;
+    return <CondominiumManagement onSelect={handleCondominiumSelect} />;
   }
 
   return (
