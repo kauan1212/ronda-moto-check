@@ -46,19 +46,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile with proper column mapping
+          // Fetch user profile with actual database columns
           setTimeout(async () => {
             try {
               const { data: profileData, error } = await supabase
                 .from('profiles')
-                .select('id, email, full_name, role, condominium_id')
+                .select('id, email, full_name, is_admin')
                 .eq('id', session.user.id)
                 .single();
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
               } else if (profileData) {
-                setProfile(profileData);
+                // Map the database structure to our interface
+                const mappedProfile: Profile = {
+                  id: profileData.id,
+                  email: profileData.email || '',
+                  full_name: profileData.full_name || '',
+                  role: profileData.is_admin ? 'admin' : 'vigilante',
+                  condominium_id: null // Will be set when we implement condominium assignment
+                };
+                setProfile(mappedProfile);
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);
