@@ -1,268 +1,182 @@
 
 import React, { useState, useEffect } from 'react';
-import Layout from '@/components/Layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Badge } from '@/components/ui/badge';
-import CameraCapture from '@/components/CameraCapture';
-import SignatureCapture from '@/components/SignatureCapture';
-import { 
-  ArrowLeft, 
-  Bike, 
-  Fuel, 
-  Shield, 
-  Lightbulb, 
-  Eye, 
-  Settings,
-  Save,
-  Send,
-  Download,
-  User,
-  Gauge
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Vigilante, Motorcycle, ChecklistItem } from '@/types';
+import { Vigilante, Motorcycle, Condominium } from '@/types';
+import { toast } from 'sonner';
+import CameraCapture from './CameraCapture';
+import SignatureCapture from './SignatureCapture';
+import Layout from './Layout';
 
 interface ChecklistFormProps {
   onBack: () => void;
 }
 
 const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
-  const { toast } = useToast();
+  const [condominiums, setCondominiums] = useState<Condominium[]>([]);
+  const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
   const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
-  const [loading, setLoading] = useState(false);
-  
   const [formData, setFormData] = useState({
     vigilante_id: '',
-    vigilante_name: '',
     motorcycle_id: '',
-    motorcycle_plate: '',
-    checklistType: '',
+    type: 'start' as 'start' | 'end',
     face_photo: '',
+    tires_status: '',
+    tires_observation: '',
+    brakes_status: '',
+    brakes_observation: '',
+    engine_oil_status: '',
+    engine_oil_observation: '',
+    coolant_status: '',
+    coolant_observation: '',
+    lights_status: '',
+    lights_observation: '',
+    electrical_status: '',
+    electrical_observation: '',
+    suspension_status: '',
+    suspension_observation: '',
+    cleaning_status: '',
+    cleaning_observation: '',
+    leaks_status: '',
+    leaks_observation: '',
     motorcycle_photos: [] as string[],
-    
-    // Itens de verificação com status
-    tires: { status: '', observation: '' },
-    brakes: { status: '', observation: '' },
-    engineOil: { status: '', observation: '' },
-    coolant: { status: '', observation: '' },
-    lights: { status: '', observation: '' },
-    electrical: { status: '', observation: '' },
-    suspension: { status: '', observation: '' },
-    cleaning: { status: '', observation: '' },
-    leaks: { status: '', observation: '' },
-    
-    general_observations: '',
-    damages: '',
-    fuel_level: '50',
+    fuel_level: 0,
     fuel_photos: [] as string[],
     motorcycle_km: '',
     km_photos: [] as string[],
+    general_observations: '',
+    damages: '',
     signature: ''
   });
 
-  const checklistItems = [
-    { 
-      id: 'tires', 
-      label: 'Pneus', 
-      icon: Settings, 
-      description: 'Verificar pressão, desgaste, banda de rodagem e integridade da câmara de ar',
-      field: 'tires' 
-    },
-    { 
-      id: 'brakes', 
-      label: 'Sistema de Freios', 
-      icon: Shield, 
-      description: 'Checar funcionamento dianteiro/traseiro, nível do fluido e espessura das pastilhas',
-      field: 'brakes' 
-    },
-    { 
-      id: 'engineOil', 
-      label: 'Nível de Óleo do Motor', 
-      icon: Fuel, 
-      description: 'Verificar nível do óleo e certificar-se que está dentro do recomendado',
-      field: 'engineOil' 
-    },
-    { 
-      id: 'coolant', 
-      label: 'Fluido de Arrefecimento', 
-      icon: Settings, 
-      description: 'Verificar nível do fluido de arrefecimento (motos com refrigeração líquida)',
-      field: 'coolant' 
-    },
-    { 
-      id: 'lights', 
-      label: 'Sistema de Iluminação', 
-      icon: Lightbulb, 
-      description: 'Testar faróis, lanternas, piscas, luz de freio, ré e iluminação da placa',
-      field: 'lights' 
-    },
-    { 
-      id: 'electrical', 
-      label: 'Sistema Elétrico', 
-      icon: Settings, 
-      description: 'Verificar buzina, partida elétrica e painel de instrumentos',
-      field: 'electrical' 
-    },
-    { 
-      id: 'suspension', 
-      label: 'Suspensão', 
-      icon: Settings, 
-      description: 'Verificar funcionamento dianteiro/traseiro, vazamentos ou folgas',
-      field: 'suspension' 
-    },
-    { 
-      id: 'cleaning', 
-      label: 'Limpeza', 
-      icon: Settings, 
-      description: 'Realizar limpeza externa e interna da motocicleta',
-      field: 'cleaning' 
-    },
-    { 
-      id: 'leaks', 
-      label: 'Verificação de Vazamentos', 
-      icon: Eye, 
-      description: 'Observar vazamentos de óleo, combustível ou outros fluidos',
-      field: 'leaks' 
-    }
-  ];
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraType, setCameraType] = useState<'face' | 'motorcycle' | 'fuel' | 'km'>('face');
+  const [showSignature, setShowSignature] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadData();
+    fetchCondominiums();
   }, []);
 
-  const loadData = async () => {
-    try {
-      const [vigilantesData, motorcyclesData] = await Promise.all([
-        supabase.from('vigilantes').select('*').eq('status', 'active'),
-        supabase.from('motorcycles').select('*').eq('status', 'available')
-      ]);
+  useEffect(() => {
+    if (selectedCondominiumId) {
+      fetchVigilantesAndMotorcycles();
+    }
+  }, [selectedCondominiumId]);
 
-      if (vigilantesData.data) setVigilantes(vigilantesData.data);
-      if (motorcyclesData.data) setMotorcycles(motorcyclesData.data);
+  const fetchCondominiums = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('condominiums')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCondominiums(data || []);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error('Erro ao buscar condomínios:', error);
+      toast.error('Erro ao carregar condomínios');
     }
   };
 
-  const handleVigilanteChange = (vigilanteId: string) => {
-    const vigilante = vigilantes.find(v => v.id === vigilanteId);
-    setFormData(prev => ({
-      ...prev,
-      vigilante_id: vigilanteId,
-      vigilante_name: vigilante?.name || ''
-    }));
+  const fetchVigilantesAndMotorcycles = async () => {
+    try {
+      const [vigilantesResponse, motorcyclesResponse] = await Promise.all([
+        supabase
+          .from('vigilantes')
+          .select('*')
+          .eq('condominium_id', selectedCondominiumId)
+          .eq('status', 'active'),
+        supabase
+          .from('motorcycles')
+          .select('*')
+          .eq('condominium_id', selectedCondominiumId)
+          .eq('status', 'available')
+      ]);
+
+      if (vigilantesResponse.error) throw vigilantesResponse.error;
+      if (motorcyclesResponse.error) throw motorcyclesResponse.error;
+
+      setVigilantes(vigilantesResponse.data || []);
+      setMotorcycles(motorcyclesResponse.data || []);
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+      toast.error('Erro ao carregar vigilantes e motocicletas');
+    }
   };
 
-  const handleMotorcycleChange = (motorcycleId: string) => {
-    const motorcycle = motorcycles.find(m => m.id === motorcycleId);
-    setFormData(prev => ({
-      ...prev,
-      motorcycle_id: motorcycleId,
-      motorcycle_plate: motorcycle?.plate || ''
-    }));
+  const openCamera = (type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
+    setCameraType(type);
+    setShowCamera(true);
   };
 
-  const handleItemStatusChange = (field: string, status: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field as keyof typeof formData] as ChecklistItem,
-        status
-      }
-    }));
+  const handlePhotoCapture = (imageData: string) => {
+    switch (cameraType) {
+      case 'face':
+        setFormData(prev => ({ ...prev, face_photo: imageData }));
+        break;
+      case 'motorcycle':
+        setFormData(prev => ({ 
+          ...prev, 
+          motorcycle_photos: [...prev.motorcycle_photos, imageData] 
+        }));
+        break;
+      case 'fuel':
+        setFormData(prev => ({ 
+          ...prev, 
+          fuel_photos: [...prev.fuel_photos, imageData] 
+        }));
+        break;
+      case 'km':
+        setFormData(prev => ({ 
+          ...prev, 
+          km_photos: [...prev.km_photos, imageData] 
+        }));
+        break;
+    }
+    setShowCamera(false);
+    toast.success('Foto capturada com sucesso!');
   };
 
-  const handleItemObservationChange = (field: string, observation: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field as keyof typeof formData] as ChecklistItem,
-        observation
-      }
-    }));
+  const handleSignatureCapture = (signatureData: string) => {
+    setFormData(prev => ({ ...prev, signature: signatureData }));
+    setShowSignature(false);
+    toast.success('Assinatura capturada com sucesso!');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.face_photo) {
-      toast({
-        title: "Foto facial obrigatória",
-        description: "É necessário tirar uma foto do rosto para prosseguir.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.signature) {
-      toast({
-        title: "Assinatura obrigatória",
-        description: "É necessário assinar o checklist para finalizar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.vigilante_id || !formData.motorcycle_id) {
-      toast({
-        title: "Dados obrigatórios",
-        description: "Selecione o vigilante e a motocicleta.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
+      if (!selectedCondominiumId || !formData.vigilante_id || !formData.motorcycle_id) {
+        toast.error('Preencha todos os campos obrigatórios');
+        return;
+      }
+
+      const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
+      const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
+
+      if (!selectedVigilante || !selectedMotorcycle) {
+        toast.error('Vigilante ou motocicleta não encontrados');
+        return;
+      }
+
       const checklistData = {
-        vigilante_id: formData.vigilante_id,
-        vigilante_name: formData.vigilante_name,
-        motorcycle_id: formData.motorcycle_id,
-        motorcycle_plate: formData.motorcycle_plate,
-        type: formData.checklistType,
-        face_photo: formData.face_photo,
-        motorcycle_photos: formData.motorcycle_photos,
-        fuel_level: parseInt(formData.fuel_level),
-        fuel_photos: formData.fuel_photos,
-        motorcycle_km: formData.motorcycle_km,
-        km_photos: formData.km_photos,
-        general_observations: formData.general_observations,
-        damages: formData.damages,
-        signature: formData.signature,
-        
-        // Status dos itens
-        tires_status: formData.tires.status,
-        tires_observation: formData.tires.observation,
-        brakes_status: formData.brakes.status,
-        brakes_observation: formData.brakes.observation,
-        engine_oil_status: formData.engineOil.status,
-        engine_oil_observation: formData.engineOil.observation,
-        coolant_status: formData.coolant.status,
-        coolant_observation: formData.coolant.observation,
-        lights_status: formData.lights.status,
-        lights_observation: formData.lights.observation,
-        electrical_status: formData.electrical.status,
-        electrical_observation: formData.electrical.observation,
-        suspension_status: formData.suspension.status,
-        suspension_observation: formData.suspension.observation,
-        cleaning_status: formData.cleaning.status,
-        cleaning_observation: formData.cleaning.observation,
-        leaks_status: formData.leaks.status,
-        leaks_observation: formData.leaks.observation,
+        ...formData,
+        condominium_id: selectedCondominiumId,
+        vigilante_name: selectedVigilante.name,
+        motorcycle_plate: selectedMotorcycle.plate,
+        status: 'completed',
+        completed_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -271,112 +185,129 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "Checklist salvo com sucesso!",
-        description: "Checklist foi processado e enviado para o administrador.",
-      });
-
+      toast.success('Checklist salvo com sucesso!');
+      
       // Reset form
       setFormData({
         vigilante_id: '',
-        vigilante_name: '',
         motorcycle_id: '',
-        motorcycle_plate: '',
-        checklistType: '',
+        type: 'start',
         face_photo: '',
+        tires_status: '',
+        tires_observation: '',
+        brakes_status: '',
+        brakes_observation: '',
+        engine_oil_status: '',
+        engine_oil_observation: '',
+        coolant_status: '',
+        coolant_observation: '',
+        lights_status: '',
+        lights_observation: '',
+        electrical_status: '',
+        electrical_observation: '',
+        suspension_status: '',
+        suspension_observation: '',
+        cleaning_status: '',
+        cleaning_observation: '',
+        leaks_status: '',
+        leaks_observation: '',
         motorcycle_photos: [],
-        tires: { status: '', observation: '' },
-        brakes: { status: '', observation: '' },
-        engineOil: { status: '', observation: '' },
-        coolant: { status: '', observation: '' },
-        lights: { status: '', observation: '' },
-        electrical: { status: '', observation: '' },
-        suspension: { status: '', observation: '' },
-        cleaning: { status: '', observation: '' },
-        leaks: { status: '', observation: '' },
-        general_observations: '',
-        damages: '',
-        fuel_level: '50',
+        fuel_level: 0,
         fuel_photos: [],
         motorcycle_km: '',
         km_photos: [],
+        general_observations: '',
+        damages: '',
         signature: ''
       });
-
+      setSelectedCondominiumId('');
     } catch (error) {
       console.error('Erro ao salvar checklist:', error);
-      toast({
-        title: "Erro ao salvar",
-        description: "Erro ao salvar o checklist. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error('Erro ao salvar checklist');
     } finally {
       setLoading(false);
     }
   };
 
-  const generatePDF = () => {
-    toast({
-      title: "PDF Gerado",
-      description: "Download do PDF iniciado.",
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
+  const StatusIcon = ({ status }: { status: string }) => {
     switch (status) {
       case 'good':
-        return <Badge className="bg-green-100 text-green-800">Bom</Badge>;
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'regular':
-        return <Badge className="bg-yellow-100 text-yellow-800">Regular</Badge>;
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       case 'needs_repair':
-        return <Badge className="bg-red-100 text-red-800">Necessita Reparo</Badge>;
+        return <XCircle className="h-4 w-4 text-red-600" />;
       default:
         return null;
     }
   };
 
+  if (showCamera) {
+    return (
+      <CameraCapture
+        onCapture={handlePhotoCapture}
+        onCancel={() => setShowCamera(false)}
+        title={
+          cameraType === 'face' ? 'Foto Facial' :
+          cameraType === 'motorcycle' ? 'Foto da Motocicleta' :
+          cameraType === 'fuel' ? 'Foto do Combustível' : 'Foto do Hodômetro'
+        }
+      />
+    );
+  }
+
+  if (showSignature) {
+    return (
+      <SignatureCapture
+        onCapture={handleSignatureCapture}
+        onCancel={() => setShowSignature(false)}
+      />
+    );
+  }
+
   return (
-    <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onBack} className="hover:scale-105 transition-transform">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
-              Checklist Profissional da Motocicleta
-            </h2>
-            <p className="text-slate-600 dark:text-slate-300">
-              Inspecione todos os itens e registre fotograficamente antes de iniciar a ronda
-            </p>
-          </div>
-        </div>
+    <Layout title="Checklist de Vistoria" onBack={onBack}>
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
+        {/* Seleção de Condomínio */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-lg">
+              <User className="h-5 w-5 mr-2" />
+              Identificação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="condominium">Condomínio *</Label>
+              <Select 
+                value={selectedCondominiumId} 
+                onValueChange={setSelectedCondominiumId}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o condomínio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {condominiums.map((condo) => (
+                    <SelectItem key={condo.id} value={condo.id}>
+                      {condo.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Foto Facial do Vigilante */}
-          <CameraCapture
-            title="Foto Facial do Vigilante"
-            description="Tire uma foto clara do seu rosto para identificação no checklist"
-            onCapture={(imageData) => setFormData(prev => ({ ...prev, face_photo: imageData }))}
-          />
-
-          {/* Informações Básicas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Informações do Checklist
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vigilante">Selecionar Vigilante</Label>
-                  <Select value={formData.vigilante_id} onValueChange={handleVigilanteChange}>
+            {selectedCondominiumId && (
+              <>
+                <div>
+                  <Label htmlFor="vigilante">Vigilante *</Label>
+                  <Select 
+                    value={formData.vigilante_id} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, vigilante_id: value }))}
+                    required
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Escolha o vigilante" />
+                      <SelectValue placeholder="Selecione o vigilante" />
                     </SelectTrigger>
                     <SelectContent>
                       {vigilantes.map((vigilante) => (
@@ -388,263 +319,317 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="motorcycle">Selecionar Motocicleta</Label>
-                  <Select value={formData.motorcycle_id} onValueChange={handleMotorcycleChange}>
+                <div>
+                  <Label htmlFor="motorcycle">Motocicleta *</Label>
+                  <Select 
+                    value={formData.motorcycle_id} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, motorcycle_id: value }))}
+                    required
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Escolha a moto" />
+                      <SelectValue placeholder="Selecione a motocicleta" />
                     </SelectTrigger>
                     <SelectContent>
                       {motorcycles.map((motorcycle) => (
                         <SelectItem key={motorcycle.id} value={motorcycle.id}>
-                          {motorcycle.brand} {motorcycle.model} - {motorcycle.plate}
+                          {motorcycle.plate} - {motorcycle.brand} {motorcycle.model}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="checklistType">Tipo de Checklist</Label>
-                  <Select value={formData.checklistType} onValueChange={(value) => 
-                    setFormData(prev => ({ ...prev, checklistType: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo do checklist" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="start">Início da Ronda</SelectItem>
-                      <SelectItem value="end">Fim da Ronda</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div>
+                  <Label>Tipo de Vistoria *</Label>
+                  <RadioGroup 
+                    value={formData.type} 
+                    onValueChange={(value: 'start' | 'end') => setFormData(prev => ({ ...prev, type: value }))}
+                    className="flex flex-col sm:flex-row gap-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="start" id="start" />
+                      <Label htmlFor="start">Início do Turno</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="end" id="end" />
+                      <Label htmlFor="end">Fim do Turno</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Itens de Verificação Detalhados */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Itens de Verificação Profissional</CardTitle>
-              <CardDescription>
-                Avalie cada item e adicione observações quando necessário
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {checklistItems.map((item) => (
-                  <div key={item.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center gap-2 mb-3">
-                      <item.icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                      <Label className="font-medium text-lg">{item.label}</Label>
-                      {formData[item.field as keyof typeof formData] && 
-                       typeof formData[item.field as keyof typeof formData] === 'object' && 
-                       (formData[item.field as keyof typeof formData] as ChecklistItem).status && 
-                       getStatusBadge((formData[item.field as keyof typeof formData] as ChecklistItem).status)}
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                      {item.description}
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium mb-2 block">Status da Verificação</Label>
-                        <RadioGroup
-                          value={formData[item.field as keyof typeof formData] && 
-                                typeof formData[item.field as keyof typeof formData] === 'object' ? 
-                                (formData[item.field as keyof typeof formData] as ChecklistItem).status : ''}
-                          onValueChange={(value) => handleItemStatusChange(item.field, value)}
-                          className="flex gap-6"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="good" id={`${item.id}-good`} />
-                            <Label htmlFor={`${item.id}-good`} className="text-green-700">Bom</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="regular" id={`${item.id}-regular`} />
-                            <Label htmlFor={`${item.id}-regular`} className="text-yellow-700">Regular</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="needs_repair" id={`${item.id}-repair`} />
-                            <Label htmlFor={`${item.id}-repair`} className="text-red-700">Necessita Reparo</Label>
-                          </div>
-                        </RadioGroup>
+                <div>
+                  <Label>Foto Facial</Label>
+                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                    <Button
+                      type="button"
+                      onClick={() => openCamera('face')}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      {formData.face_photo ? 'Refazer Foto' : 'Tirar Foto'}
+                    </Button>
+                    {formData.face_photo && (
+                      <div className="w-full sm:w-20 h-20 border rounded-lg overflow-hidden">
+                        <img 
+                          src={formData.face_photo} 
+                          alt="Foto facial" 
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      
-                      <Textarea
-                        placeholder="Observações adicionais (opcional)"
-                        value={formData[item.field as keyof typeof formData] && 
-                              typeof formData[item.field as keyof typeof formData] === 'object' ? 
-                              (formData[item.field as keyof typeof formData] as ChecklistItem).observation : ''}
-                        onChange={(e) => handleItemObservationChange(item.field, e.target.value)}
-                        rows={2}
-                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Resto dos campos só aparece se condomínio for selecionado */}
+        {selectedCondominiumId && (
+          <>
+            {/* Verificação de Itens */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center text-lg">
+                  <Bike className="h-5 w-5 mr-2" />
+                  Verificação de Itens
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {[
+                  { key: 'tires', label: 'Pneus' },
+                  { key: 'brakes', label: 'Freios' },
+                  { key: 'engine_oil', label: 'Óleo do Motor' },
+                  { key: 'coolant', label: 'Líquido de Arrefecimento' },
+                  { key: 'lights', label: 'Luzes' },
+                  { key: 'electrical', label: 'Sistema Elétrico' },
+                  { key: 'suspension', label: 'Suspensão' },
+                  { key: 'cleaning', label: 'Limpeza' },
+                  { key: 'leaks', label: 'Vazamentos' }
+                ].map((item) => (
+                  <div key={item.key} className="space-y-3 p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-medium">{item.label}</Label>
+                      <StatusIcon status={formData[`${item.key}_status` as keyof typeof formData] as string} />
                     </div>
+                    <RadioGroup 
+                      value={formData[`${item.key}_status` as keyof typeof formData] as string}
+                      onValueChange={(value) => setFormData(prev => ({ 
+                        ...prev, 
+                        [`${item.key}_status`]: value 
+                      }))}
+                      className="flex flex-col sm:flex-row gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="good" id={`${item.key}-good`} />
+                        <Label htmlFor={`${item.key}-good`} className="text-green-700">Bom</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="regular" id={`${item.key}-regular`} />
+                        <Label htmlFor={`${item.key}-regular`} className="text-yellow-700">Regular</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="needs_repair" id={`${item.key}-repair`} />
+                        <Label htmlFor={`${item.key}-repair`} className="text-red-700">Precisa Reparo</Label>
+                      </div>
+                    </RadioGroup>
+                    <Textarea
+                      placeholder="Observações (opcional)"
+                      value={formData[`${item.key}_observation` as keyof typeof formData] as string}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        [`${item.key}_observation`]: e.target.value 
+                      }))}
+                      className="mt-2"
+                    />
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Nível de Combustível com Fotos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Fuel className="h-5 w-5" />
-                Nível de Combustível
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Label htmlFor="fuelLevel">Nível atual (%)</Label>
-                <Input
-                  id="fuelLevel"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.fuel_level}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fuel_level: e.target.value }))}
-                  className="w-32"
-                />
-                <div className="flex gap-2">
-                  <Badge variant={parseInt(formData.fuel_level) > 50 ? "secondary" : "destructive"}>
-                    {parseInt(formData.fuel_level) > 50 ? "Nível OK" : "Nível Baixo"}
-                  </Badge>
+            {/* Fotos e Medições */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Fotos e Medições</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Fotos da Motocicleta */}
+                <div>
+                  <Label>Fotos da Motocicleta</Label>
+                  <div className="flex flex-col gap-3 mt-2">
+                    <Button
+                      type="button"
+                      onClick={() => openCamera('motorcycle')}
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Adicionar Foto
+                    </Button>
+                    {formData.motorcycle_photos.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {formData.motorcycle_photos.map((photo, index) => (
+                          <div key={index} className="w-full h-20 border rounded-lg overflow-hidden">
+                            <img 
+                              src={photo} 
+                              alt={`Motocicleta ${index + 1}`} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              <CameraCapture
-                title="Foto do Painel - Combustível"
-                description="Registre o nível de combustível no painel"
-                onCapture={(imageData) => {
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    fuel_photos: [...prev.fuel_photos, imageData] 
-                  }));
-                }}
-              />
-            </CardContent>
-          </Card>
 
-          {/* Quilometragem com Fotos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gauge className="h-5 w-5" />
-                Quilometragem da Motocicleta
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Label htmlFor="motorcycleKm">Quilometragem Atual</Label>
-                <Input
-                  id="motorcycleKm"
-                  type="text"
-                  placeholder="Ex: 25.430 km"
-                  value={formData.motorcycle_km}
-                  onChange={(e) => setFormData(prev => ({ ...prev, motorcycle_km: e.target.value }))}
-                />
-              </div>
-              
-              <CameraCapture
-                title="Foto do Painel - Quilometragem"
-                description="Registre a quilometragem mostrada no painel"
-                onCapture={(imageData) => {
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    km_photos: [...prev.km_photos, imageData] 
-                  }));
-                }}
-              />
-            </CardContent>
-          </Card>
+                {/* Combustível */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="fuel_level">Nível de Combustível (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.fuel_level}
+                      onChange={(e) => setFormData(prev => ({ ...prev, fuel_level: parseInt(e.target.value) || 0 }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Foto do Combustível</Label>
+                    <div className="flex gap-3 mt-1">
+                      <Button
+                        type="button"
+                        onClick={() => openCamera('fuel')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Foto
+                      </Button>
+                      {formData.fuel_photos.length > 0 && (
+                        <div className="w-12 h-12 border rounded overflow-hidden">
+                          <img 
+                            src={formData.fuel_photos[0]} 
+                            alt="Combustível" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-          {/* Fotos da Motocicleta */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {['Lateral Direita', 'Lateral Esquerda', 'Frente', 'Traseira'].map((position, index) => (
-              <CameraCapture
-                key={position}
-                title={`Foto - ${position}`}
-                description={`Registre o estado da motocicleta pela ${position.toLowerCase()}`}
-                onCapture={(imageData) => {
-                  const newPhotos = [...formData.motorcycle_photos];
-                  newPhotos[index] = imageData;
-                  setFormData(prev => ({ ...prev, motorcycle_photos: newPhotos }));
-                }}
-              />
-            ))}
-          </div>
+                {/* Quilometragem */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="motorcycle_km">Quilometragem</Label>
+                    <Input
+                      value={formData.motorcycle_km}
+                      onChange={(e) => setFormData(prev => ({ ...prev, motorcycle_km: e.target.value }))}
+                      placeholder="Ex: 12.345"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Foto do Hodômetro</Label>
+                    <div className="flex gap-3 mt-1">
+                      <Button
+                        type="button"
+                        onClick={() => openCamera('km')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Foto
+                      </Button>
+                      {formData.km_photos.length > 0 && (
+                        <div className="w-12 h-12 border rounded overflow-hidden">
+                          <img 
+                            src={formData.km_photos[0]} 
+                            alt="Hodômetro" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Observações */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Observações Gerais</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="generalObservations">Observações Gerais</Label>
-                <Textarea
-                  id="generalObservations"
-                  placeholder="Descreva o estado geral da motocicleta..."
-                  value={formData.general_observations}
-                  onChange={(e) => setFormData(prev => ({ ...prev, general_observations: e.target.value }))}
-                  rows={3}
-                />
-              </div>
+            {/* Observações e Assinatura */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Observações e Assinatura</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="general_observations">Observações Gerais</Label>
+                  <Textarea
+                    id="general_observations"
+                    value={formData.general_observations}
+                    onChange={(e) => setFormData(prev => ({ ...prev, general_observations: e.target.value }))}
+                    placeholder="Observações gerais sobre a vistoria"
+                    className="mt-1"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="damages">Danos ou Problemas Identificados</Label>
-                <Textarea
-                  id="damages"
-                  placeholder="Relate qualquer dano, problema ou irregularidade encontrada..."
-                  value={formData.damages}
-                  onChange={(e) => setFormData(prev => ({ ...prev, damages: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="damages">Danos ou Problemas</Label>
+                  <Textarea
+                    id="damages"
+                    value={formData.damages}
+                    onChange={(e) => setFormData(prev => ({ ...prev, damages: e.target.value }))}
+                    placeholder="Descreva qualquer dano ou problema encontrado"
+                    className="mt-1"
+                  />
+                </div>
 
-          {/* Assinatura Digital */}
-          <SignatureCapture 
-            onSignature={(signatureData) => setFormData(prev => ({ ...prev, signature: signatureData }))}
-          />
+                <div>
+                  <Label>Assinatura</Label>
+                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                    <Button
+                      type="button"
+                      onClick={() => setShowSignature(true)}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {formData.signature ? 'Refazer Assinatura' : 'Assinar'}
+                    </Button>
+                    {formData.signature && (
+                      <div className="w-full sm:w-32 h-20 border rounded-lg overflow-hidden bg-white">
+                        <img 
+                          src={formData.signature} 
+                          alt="Assinatura" 
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Botões de Ação */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button 
-              type="submit" 
-              size="lg" 
-              disabled={loading}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Save className="h-5 w-5 mr-2" />
-              {loading ? 'Salvando...' : 'Salvar e Enviar'}
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="lg" 
-              onClick={generatePDF}
-              className="border-2 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              <Download className="h-5 w-5 mr-2" />
-              Download PDF
-            </Button>
-
-            <Button 
-              type="button" 
-              size="lg" 
-              onClick={() => window.location.href = '/'}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Finalizar
-            </Button>
-          </div>
-        </form>
-      </div>
+            {/* Botão de Salvar */}
+            <Card>
+              <CardContent className="pt-6">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
+                  disabled={loading}
+                >
+                  <Save className="h-5 w-5 mr-2" />
+                  {loading ? 'Salvando...' : 'Salvar Checklist'}
+                </Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </form>
     </Layout>
   );
 };

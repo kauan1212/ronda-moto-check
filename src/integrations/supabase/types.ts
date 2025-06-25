@@ -166,6 +166,7 @@ export type Database = {
           cleaning_observation: string | null
           cleaning_status: string | null
           completed_at: string | null
+          condominium_id: string | null
           coolant_observation: string | null
           coolant_status: string | null
           created_at: string | null
@@ -204,6 +205,7 @@ export type Database = {
           cleaning_observation?: string | null
           cleaning_status?: string | null
           completed_at?: string | null
+          condominium_id?: string | null
           coolant_observation?: string | null
           coolant_status?: string | null
           created_at?: string | null
@@ -242,6 +244,7 @@ export type Database = {
           cleaning_observation?: string | null
           cleaning_status?: string | null
           completed_at?: string | null
+          condominium_id?: string | null
           coolant_observation?: string | null
           coolant_status?: string | null
           created_at?: string | null
@@ -275,6 +278,13 @@ export type Database = {
           vigilante_name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "checklists_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "checklists_motorcycle_id_fkey"
             columns: ["motorcycle_id"]
@@ -359,6 +369,36 @@ export type Database = {
         }
         Relationships: []
       }
+      condominiums: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
@@ -431,6 +471,7 @@ export type Database = {
         Row: {
           brand: string
           color: string
+          condominium_id: string | null
           created_at: string | null
           id: string
           model: string
@@ -442,6 +483,7 @@ export type Database = {
         Insert: {
           brand: string
           color: string
+          condominium_id?: string | null
           created_at?: string | null
           id?: string
           model: string
@@ -453,6 +495,7 @@ export type Database = {
         Update: {
           brand?: string
           color?: string
+          condominium_id?: string | null
           created_at?: string | null
           id?: string
           model?: string
@@ -461,7 +504,15 @@ export type Database = {
           updated_at?: string | null
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "motorcycles_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       personal_trainers: {
         Row: {
@@ -814,6 +865,7 @@ export type Database = {
       }
       vigilantes: {
         Row: {
+          condominium_id: string | null
           created_at: string | null
           email: string
           id: string
@@ -823,6 +875,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          condominium_id?: string | null
           created_at?: string | null
           email: string
           id?: string
@@ -832,6 +885,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          condominium_id?: string | null
           created_at?: string | null
           email?: string
           id?: string
@@ -840,7 +894,15 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vigilantes_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workout_sessions: {
         Row: {

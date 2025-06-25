@@ -1,191 +1,185 @@
 
 import React, { useRef, useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Camera, RotateCcw, Check, Upload } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Camera, X, RotateCcw } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
-  title: string;
-  description?: string;
+  onCancel: () => void;
+  title?: string;
 }
 
-const CameraCapture = ({ onCapture, title, description }: CameraCaptureProps) => {
+const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraCaptureProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'user',
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        } 
-      });
+        }
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(mediaStream);
       
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setIsStreaming(true);
+        videoRef.current.srcObject = mediaStream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.setAttribute('muted', 'true');
+        await videoRef.current.play();
       }
     } catch (error) {
-      console.error('Erro ao acessar a câmera:', error);
-      toast({
-        title: "Erro na câmera",
-        description: "Não foi possível acessar a câmera. Verifique as permissões.",
-        variant: "destructive",
-      });
+      console.error('Erro ao acessar câmera:', error);
+      alert('Erro ao acessar a câmera. Verifique as permissões.');
     }
+  }, [facingMode, stream]);
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    setCapturedImage(imageData);
+    setIsCapturing(true);
   };
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-      setIsStreaming(false);
-    }
-  };
-
-  const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-
-      if (context) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
-        
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedImage(imageData);
-        stopCamera();
-      }
-    }
-  }, []);
-
-  const confirmPhoto = () => {
+  const confirmCapture = () => {
     if (capturedImage) {
       onCapture(capturedImage);
-      setCapturedImage(null);
-      toast({
-        title: "Foto capturada!",
-        description: "Foto salva com sucesso.",
-      });
+      cleanup();
     }
   };
 
   const retakePhoto = () => {
     setCapturedImage(null);
-    startCamera();
+    setIsCapturing(false);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        setCapturedImage(imageData);
-      };
-      reader.readAsDataURL(file);
-    }
+  const switchCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
+
+  const cleanup = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setCapturedImage(null);
+    setIsCapturing(false);
+  };
+
+  React.useEffect(() => {
+    startCamera();
+    
+    return () => {
+      cleanup();
+    };
+  }, [startCamera]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Camera className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        {description && <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!isStreaming && !capturedImage && (
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button onClick={startCamera} className="flex-1">
-                <Camera className="h-4 w-4 mr-2" />
-                Abrir Câmera
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Escolher Arquivo
-              </Button>
-            </div>
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 bg-black/50 text-white">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            cleanup();
+            onCancel();
+          }}
+          className="text-white hover:bg-white/20"
+        >
+          <X className="h-6 w-6" />
+        </Button>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={switchCamera}
+          className="text-white hover:bg-white/20"
+        >
+          <RotateCcw className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Camera view */}
+      <div className="flex-1 relative overflow-hidden">
+        {!isCapturing ? (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            playsInline
+            muted
+            autoPlay
+          />
+        ) : (
+          <img
+            src={capturedImage || ''}
+            alt="Captured"
+            className="w-full h-full object-cover"
+          />
+        )}
+        
+        <canvas
+          ref={canvasRef}
+          className="hidden"
+        />
+      </div>
+
+      {/* Controls */}
+      <div className="p-6 bg-black/50">
+        {!isCapturing ? (
+          <div className="flex justify-center">
+            <Button
+              size="lg"
+              onClick={capturePhoto}
+              className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black"
+            >
+              <Camera className="h-8 w-8" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex justify-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={retakePhoto}
+              className="flex-1 max-w-xs"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Refazer
+            </Button>
+            <Button
+              onClick={confirmCapture}
+              className="flex-1 max-w-xs bg-green-600 hover:bg-green-700"
+            >
+              Confirmar
+            </Button>
           </div>
         )}
-
-        {isStreaming && (
-          <div className="space-y-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                autoPlay
-                muted
-                playsInline
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button onClick={capturePhoto} className="flex-1">
-                <Camera className="h-4 w-4 mr-2" />
-                Capturar Foto
-              </Button>
-              <Button variant="outline" onClick={stopCamera}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {capturedImage && (
-          <div className="space-y-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <img
-                src={capturedImage}
-                alt="Foto capturada"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button onClick={confirmPhoto} className="flex-1">
-                <Check className="h-4 w-4 mr-2" />
-                Confirmar Foto
-              </Button>
-              <Button variant="outline" onClick={retakePhoto}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Tirar Novamente
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <canvas ref={canvasRef} className="hidden" />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
