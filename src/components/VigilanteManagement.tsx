@@ -55,7 +55,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
         if (error) {
           console.error('Error updating vigilante:', error);
           
-          // Tratamento específico para erros de constraint
           if (error.code === '23505') {
             if (error.message.includes('email')) {
               toast.error('Este email já está sendo usado por outro vigilante');
@@ -78,7 +77,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
         if (error) {
           console.error('Error creating vigilante:', error);
           
-          // Tratamento específico para erros de constraint
           if (error.code === '23505') {
             if (error.message.includes('email')) {
               toast.error('Este email já está sendo usado por outro vigilante');
@@ -98,7 +96,12 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
       setDialogOpen(false);
       setEditingVigilante(null);
       form.reset();
-      onUpdate();
+      
+      // Force update of the parent component
+      setTimeout(() => {
+        onUpdate();
+      }, 100);
+      
     } catch (error: any) {
       console.error('Error saving vigilante:', error);
       toast.error('Erro ao salvar vigilante: ' + (error.message || 'Erro desconhecido'));
@@ -129,7 +132,12 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
 
       if (error) throw error;
       toast.success('Vigilante excluído com sucesso!');
-      onUpdate();
+      
+      // Force update of the parent component
+      setTimeout(() => {
+        onUpdate();
+      }, 100);
+      
     } catch (error: any) {
       console.error('Error deleting vigilante:', error);
       toast.error('Erro ao excluir vigilante: ' + (error.message || 'Erro desconhecido'));
@@ -154,7 +162,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Vigilantes
+              Vigilantes ({vigilantes.length})
             </CardTitle>
             <CardDescription>
               Gerencie os vigilantes do condomínio

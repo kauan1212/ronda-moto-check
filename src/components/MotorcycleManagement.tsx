@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +52,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       console.log('Submitting motorcycle data:', values);
       
       const motorcycleData = {
-        plate: values.plate.toUpperCase(), // Sempre salvar placa em maiúscula
+        plate: values.plate.toUpperCase(),
         brand: values.brand,
         model: values.model,
         year: values.year,
@@ -73,7 +72,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         if (error) {
           console.error('Error updating motorcycle:', error);
           
-          // Tratamento específico para erros de constraint
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
               toast.error('Esta placa já está sendo usada por outra motocicleta');
@@ -94,7 +92,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         if (error) {
           console.error('Error creating motorcycle:', error);
           
-          // Tratamento específico para erros de constraint
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
               toast.error('Esta placa já está sendo usada por outra motocicleta');
@@ -112,7 +109,12 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       setDialogOpen(false);
       setEditingMotorcycle(null);
       form.reset();
-      onUpdate();
+      
+      // Force update of the parent component
+      setTimeout(() => {
+        onUpdate();
+      }, 100);
+      
     } catch (error: any) {
       console.error('Error saving motorcycle:', error);
       toast.error('Erro ao salvar motocicleta: ' + (error.message || 'Erro desconhecido'));
@@ -145,7 +147,12 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
 
       if (error) throw error;
       toast.success('Motocicleta excluída com sucesso!');
-      onUpdate();
+      
+      // Force update of the parent component
+      setTimeout(() => {
+        onUpdate();
+      }, 100);
+      
     } catch (error: any) {
       console.error('Error deleting motorcycle:', error);
       toast.error('Erro ao excluir motocicleta: ' + (error.message || 'Erro desconhecido'));
@@ -172,7 +179,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
           <div>
             <CardTitle className="flex items-center gap-2">
               <Bike className="h-5 w-5" />
-              Motocicletas
+              Motocicletas ({motorcycles.length})
             </CardTitle>
             <CardDescription>
               Gerencie a frota de motocicletas do condomínio
