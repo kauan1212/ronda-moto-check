@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Condominium } from '@/types';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import Dashboard from '@/components/Dashboard';
-import ProtectedRoute from '@/components/ProtectedRoute';
 
 const AdminDashboard = () => {
   const [selectedCondominium, setSelectedCondominium] = useState<Condominium | null>(null);
@@ -17,7 +16,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <ProtectedRoute requireAdmin={true}>
+    <>
       {!selectedCondominium ? (
         <CondominiumManagement onSelect={handleCondominiumSelect} />
       ) : (
@@ -26,7 +25,7 @@ const AdminDashboard = () => {
           onBack={handleBack}
         />
       )}
-    </ProtectedRoute>
+    </>
   );
 };
 

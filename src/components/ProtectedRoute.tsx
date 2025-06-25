@@ -11,6 +11,8 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
   const { user, profile, loading } = useAuth();
 
+  console.log('ProtectedRoute - loading:', loading, 'user:', user, 'profile:', profile);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
@@ -23,6 +25,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
   }
 
   if (!user || !profile) {
+    console.log('ProtectedRoute - Redirecting to AuthPage');
     return <AuthPage />;
   }
 
@@ -37,6 +40,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
     );
   }
 
+  console.log('ProtectedRoute - Rendering children');
   return <>{children}</>;
 };
 

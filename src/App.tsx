@@ -6,9 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
-import AdminDashboard from "./pages/AdminDashboard";
+import Index from "./pages/Index";
 import VigilanteChecklistPage from "./pages/VigilanteChecklistPage";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -21,9 +22,17 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<AdminDashboard />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/vigilante-checklist" element={<VigilanteChecklistPage />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/admin" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/vigilante-checklist" element={
+                <ProtectedRoute>
+                  <VigilanteChecklistPage />
+                </ProtectedRoute>
+              } />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
