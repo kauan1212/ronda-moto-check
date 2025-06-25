@@ -175,8 +175,8 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
         <div className="text-center mb-8 pt-8">
           <div className="flex items-center justify-center mb-4">
             <img 
-              src="/placeholder.svg" 
-              alt="Logo" 
+              src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
+              alt="Grupo Celdan Facilities" 
               className="h-16 w-16 rounded-lg shadow-lg"
             />
             <h1 className="text-4xl font-bold text-slate-800 ml-4">

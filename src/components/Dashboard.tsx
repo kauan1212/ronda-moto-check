@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +10,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Layout from './Layout';
+import VigilanteManagement from './VigilanteManagement';
+import MotorcycleManagement from './MotorcycleManagement';
 
 interface DashboardProps {
   selectedCondominium: Condominium;
@@ -699,75 +700,19 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           </TabsContent>
 
           <TabsContent value="vigilantes" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Vigilantes</CardTitle>
-                <CardDescription>
-                  Lista de vigilantes do condomínio
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {vigilantes.map((vigilante) => (
-                    <div key={vigilante.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{vigilante.name}</p>
-                        <p className="text-sm text-gray-600">{vigilante.email}</p>
-                        <p className="text-xs text-gray-500">Registro: {vigilante.registration}</p>
-                      </div>
-                      <Badge variant={vigilante.status === 'active' ? 'default' : 'secondary'}>
-                        {vigilante.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </div>
-                  ))}
-                  {vigilantes.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      Nenhum vigilante encontrado
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <VigilanteManagement 
+              condominium={selectedCondominium}
+              vigilantes={vigilantes}
+              onUpdate={fetchData}
+            />
           </TabsContent>
 
           <TabsContent value="motorcycles" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Motocicletas</CardTitle>
-                <CardDescription>
-                  Frota de motocicletas do condomínio
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {motorcycles.map((motorcycle) => (
-                    <div key={motorcycle.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{motorcycle.plate}</p>
-                        <p className="text-sm text-gray-600">
-                          {motorcycle.brand} {motorcycle.model} {motorcycle.year}
-                        </p>
-                        <p className="text-xs text-gray-500">Cor: {motorcycle.color}</p>
-                      </div>
-                      <Badge 
-                        variant={
-                          motorcycle.status === 'available' ? 'default' : 
-                          motorcycle.status === 'in_use' ? 'secondary' : 'destructive'
-                        }
-                      >
-                        {motorcycle.status === 'available' ? 'Disponível' : 
-                         motorcycle.status === 'in_use' ? 'Em Uso' : 'Manutenção'}
-                      </Badge>
-                    </div>
-                  ))}
-                  {motorcycles.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      Nenhuma motocicleta encontrada
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <MotorcycleManagement 
+              condominium={selectedCondominium}
+              motorcycles={motorcycles}
+              onUpdate={fetchData}
+            />
           </TabsContent>
         </Tabs>
       </div>

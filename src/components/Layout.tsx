@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,15 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, onBack }: LayoutProps) => {
+  const copyVigilanteLink = () => {
+    const vigilanteUrl = `${window.location.origin}/vigilante-checklist`;
+    navigator.clipboard.writeText(vigilanteUrl).then(() => {
+      toast.success('Link da área do vigilante copiado!');
+    }).catch(() => {
+      toast.error('Erro ao copiar link');
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="bg-white shadow-sm border-b">
@@ -29,8 +39,8 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
               )}
               <div className="flex items-center">
                 <img 
-                  src="/placeholder.svg" 
-                  alt="Logo" 
+                  src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
+                  alt="Grupo Celdan Facilities" 
                   className="h-8 w-8 rounded"
                 />
                 <h1 className="text-xl font-bold text-slate-800 ml-3">
@@ -40,6 +50,16 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
             </div>
             
             <div className="flex items-center gap-2">
+              <Button 
+                onClick={copyVigilanteLink}
+                variant="outline"
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Copy className="h-4 w-4" />
+                <span className="hidden sm:inline">Copiar Link Vigilante</span>
+                <span className="sm:hidden">Link</span>
+              </Button>
               <Button 
                 onClick={() => window.location.href = '/vigilante-checklist'}
                 className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
