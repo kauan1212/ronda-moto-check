@@ -1,31 +1,22 @@
 
-import React, { useState } from 'react';
-import Layout from '@/components/Layout';
-import Dashboard from '@/components/Dashboard';
-import ChecklistForm from '@/components/ChecklistForm';
+import React, { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import LoginPage from './LoginPage';
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'checklist'>('dashboard');
+  const { user } = useAuth();
 
-  const handleStartChecklist = () => {
-    setCurrentView('checklist');
-  };
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        window.location.href = '/admin';
+      } else if (user.role === 'vigilante') {
+        window.location.href = '/vigilante';
+      }
+    }
+  }, [user]);
 
-  const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-  };
-
-  return (
-    <Layout>
-      {currentView === 'dashboard' && (
-        <Dashboard onStartChecklist={handleStartChecklist} />
-      )}
-      
-      {currentView === 'checklist' && (
-        <ChecklistForm onBack={handleBackToDashboard} />
-      )}
-    </Layout>
-  );
+  return <LoginPage />;
 };
 
 export default Index;
