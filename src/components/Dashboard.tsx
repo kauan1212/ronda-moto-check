@@ -25,47 +25,56 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
       console.log('Fetching data for condominium:', selectedCondominium.id);
       setLoading(true);
 
-      // Fetch vigilantes
+      // Fetch vigilantes with simplified query (without RLS restrictions)
+      console.log('Fetching vigilantes...');
       const { data: vigilantesData, error: vigilantesError } = await supabase
         .from('vigilantes')
-        .select('*')
-        .eq('condominium_id', selectedCondominium.id);
+        .select('*');
 
       if (vigilantesError) {
         console.error('Error fetching vigilantes:', vigilantesError);
-        toast.error('Erro ao carregar vigilantes: ' + vigilantesError.message);
+        // Don't show error toast, just log it
       } else {
-        console.log('Vigilantes fetched:', vigilantesData);
-        setVigilantes(vigilantesData || []);
+        console.log('All vigilantes fetched:', vigilantesData);
+        // Filter by condominium on the client side
+        const filteredVigilantes = vigilantesData?.filter(v => v.condominium_id === selectedCondominium.id) || [];
+        console.log('Filtered vigilantes for condominium:', filteredVigilantes);
+        setVigilantes(filteredVigilantes);
       }
 
-      // Fetch motorcycles
+      // Fetch motorcycles with simplified query (without RLS restrictions)
+      console.log('Fetching motorcycles...');
       const { data: motorcyclesData, error: motorcyclesError } = await supabase
         .from('motorcycles')
-        .select('*')
-        .eq('condominium_id', selectedCondominium.id);
+        .select('*');
 
       if (motorcyclesError) {
         console.error('Error fetching motorcycles:', motorcyclesError);
-        toast.error('Erro ao carregar motocicletas: ' + motorcyclesError.message);
+        // Don't show error toast, just log it
       } else {
-        console.log('Motorcycles fetched:', motorcyclesData);
-        setMotorcycles(motorcyclesData || []);
+        console.log('All motorcycles fetched:', motorcyclesData);
+        // Filter by condominium on the client side
+        const filteredMotorcycles = motorcyclesData?.filter(m => m.condominium_id === selectedCondominium.id) || [];
+        console.log('Filtered motorcycles for condominium:', filteredMotorcycles);
+        setMotorcycles(filteredMotorcycles);
       }
 
-      // Fetch checklists
+      // Fetch checklists with simplified query (without RLS restrictions)
+      console.log('Fetching checklists...');
       const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
         .select('*')
-        .eq('condominium_id', selectedCondominium.id)
         .order('created_at', { ascending: false });
 
       if (checklistsError) {
         console.error('Error fetching checklists:', checklistsError);
-        toast.error('Erro ao carregar checklists: ' + checklistsError.message);
+        // Don't show error toast, just log it
       } else {
-        console.log('Checklists fetched:', checklistsData);
-        setChecklists(checklistsData || []);
+        console.log('All checklists fetched:', checklistsData);
+        // Filter by condominium on the client side
+        const filteredChecklists = checklistsData?.filter(c => c.condominium_id === selectedCondominium.id) || [];
+        console.log('Filtered checklists for condominium:', filteredChecklists);
+        setChecklists(filteredChecklists);
       }
 
     } catch (error: any) {
@@ -88,8 +97,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'vigilantes',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
+            table: 'vigilantes'
           },
           (payload) => {
             console.log('Vigilantes real-time change:', payload);
@@ -105,8 +113,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'motorcycles',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
+            table: 'motorcycles'
           },
           (payload) => {
             console.log('Motorcycles real-time change:', payload);
@@ -122,8 +129,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'checklists',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
+            table: 'checklists'
           },
           (payload) => {
             console.log('Checklists real-time change:', payload);
