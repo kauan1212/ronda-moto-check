@@ -34,8 +34,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
 
   const onSubmit = async (values: VigilanteForm) => {
     try {
-      console.log('Submitting vigilante data:', values);
-      
       const vigilanteData = {
         name: values.name,
         email: values.email,
@@ -44,8 +42,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
         condominium_id: condominium.id,
       };
 
-      console.log('Vigilante data to be saved:', vigilanteData);
-
       if (editingVigilante) {
         const { error } = await supabase
           .from('vigilantes')
@@ -53,8 +49,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
           .eq('id', editingVigilante.id);
 
         if (error) {
-          console.error('Error updating vigilante:', error);
-          
           if (error.code === '23505') {
             if (error.message.includes('email')) {
               toast.error('Este email já está sendo usado por outro vigilante');
@@ -75,8 +69,6 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
           .insert([vigilanteData]);
 
         if (error) {
-          console.error('Error creating vigilante:', error);
-          
           if (error.code === '23505') {
             if (error.message.includes('email')) {
               toast.error('Este email já está sendo usado por outro vigilante');
@@ -103,8 +95,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
       }, 100);
       
     } catch (error: any) {
-      console.error('Error saving vigilante:', error);
-      toast.error('Erro ao salvar vigilante: ' + (error.message || 'Erro desconhecido'));
+      toast.error('Erro ao salvar vigilante');
     }
   };
 
@@ -139,8 +130,7 @@ const VigilanteManagement = ({ condominium, vigilantes, onUpdate }: VigilanteMan
       }, 100);
       
     } catch (error: any) {
-      console.error('Error deleting vigilante:', error);
-      toast.error('Erro ao excluir vigilante: ' + (error.message || 'Erro desconhecido'));
+      toast.error('Erro ao excluir vigilante');
     }
   };
 

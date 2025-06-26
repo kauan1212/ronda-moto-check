@@ -36,8 +36,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
 
   const onSubmit = async (values: MotorcycleForm) => {
     try {
-      console.log('Submitting motorcycle data:', values);
-      
       const motorcycleData = {
         plate: values.plate.toUpperCase(),
         brand: values.brand,
@@ -48,8 +46,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         condominium_id: condominium.id,
       };
 
-      console.log('Motorcycle data to be saved:', motorcycleData);
-
       if (editingMotorcycle) {
         const { error } = await supabase
           .from('motorcycles')
@@ -57,8 +53,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
           .eq('id', editingMotorcycle.id);
 
         if (error) {
-          console.error('Error updating motorcycle:', error);
-          
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
               toast.error('Esta placa já está sendo usada por outra motocicleta');
@@ -77,8 +71,6 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
           .insert([motorcycleData]);
 
         if (error) {
-          console.error('Error creating motorcycle:', error);
-          
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
               toast.error('Esta placa já está sendo usada por outra motocicleta');
@@ -103,8 +95,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       }, 100);
       
     } catch (error: any) {
-      console.error('Error saving motorcycle:', error);
-      toast.error('Erro ao salvar motocicleta: ' + (error.message || 'Erro desconhecido'));
+      toast.error('Erro ao salvar motocicleta');
     }
   };
 
@@ -141,8 +132,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       }, 100);
       
     } catch (error: any) {
-      console.error('Error deleting motorcycle:', error);
-      toast.error('Erro ao excluir motocicleta: ' + (error.message || 'Erro desconhecido'));
+      toast.error('Erro ao excluir motocicleta');
     }
   };
 

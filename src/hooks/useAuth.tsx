@@ -23,46 +23,20 @@ export const useAuth = () => {
 
     // Function to update auth state
     const updateAuthState = async (session: Session | null) => {
-      console.log('updateAuthState called with session:', session?.user?.email);
-      
       if (!mounted) {
-        console.log('Component unmounted, skipping update');
         return;
       }
 
       if (session?.user) {
-        console.log('User found, checking admin status for:', session.user.email);
-        
-        // Check if this is the admin user
-        const isAdminUser = session.user.email === 'kauankg@hotmail.com';
-        
-        // Set auth state immediately for admin user
-        if (isAdminUser) {
-          console.log('Admin user detected, setting auth state');
-          if (mounted) {
-            setAuthState({
-              user: session.user,
-              session,
-              loading: false,
-              isAdmin: true,
-            });
-          }
-          return;
-        }
-
-        // For non-admin users, try to fetch profile but don't block on it
+        // For all users, check their role from the database
         try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          
-          console.log('Profile query result:', { profile, error });
+          const { data: userRoles, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id);
           
           if (mounted) {
-            const isAdmin = profile?.is_admin || false;
-            console.log('Setting auth state - isAdmin:', isAdmin);
+            const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
             
             setAuthState({
               user: session.user,
@@ -72,10 +46,8 @@ export const useAuth = () => {
             });
           }
         } catch (error) {
-          console.error('Error fetching profile:', error);
-          // Even if profile fetch fails, set the user as authenticated
+          // If role fetch fails, set the user as authenticated but not admin
           if (mounted) {
-            console.log('Profile fetch failed, setting auth state with isAdmin: false');
             setAuthState({
               user: session.user,
               session,
@@ -85,7 +57,6 @@ export const useAuth = () => {
           }
         }
       } else {
-        console.log('No user in session, setting auth state to logged out');
         if (mounted) {
           setAuthState({
             user: null,
@@ -97,37 +68,29 @@ export const useAuth = () => {
       }
     };
 
-    console.log('Setting up auth state listener...');
-    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, 'Session:', session?.user?.email);
         updateAuthState(session);
       }
     );
 
     // Check for existing session
-    console.log('Checking for existing session...');
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('getSession result:', { session: session?.user?.email, error });
+    supabase.auth.getSession().then(({ data: { session } }) => {
       updateAuthState(session);
     });
 
     return () => {
-      console.log('Cleaning up auth hook...');
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting to sign in with email:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    console.log('Sign in result:', { error });
     return { error };
   };
 
@@ -151,8 +114,6 @@ export const useAuth = () => {
     const { error } = await supabase.auth.signOut();
     return { error };
   };
-
-  console.log('Current auth state:', authState);
 
   return {
     ...authState,

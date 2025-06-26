@@ -23,41 +23,33 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
   const fetchData = async () => {
     try {
-      console.log('Fetching data for condominium:', selectedCondominium.id);
       setLoading(true);
 
       // Fetch vigilantes
-      console.log('Fetching vigilantes...');
       const { data: vigilantesData, error: vigilantesError } = await supabase
         .from('vigilantes')
         .select('*')
         .eq('condominium_id', selectedCondominium.id);
 
       if (vigilantesError) {
-        console.error('Error fetching vigilantes:', vigilantesError);
-        toast.error('Erro ao carregar vigilantes: ' + vigilantesError.message);
+        toast.error('Erro ao carregar vigilantes');
       } else {
-        console.log('Vigilantes fetched:', vigilantesData);
         setVigilantes(vigilantesData || []);
       }
 
       // Fetch motorcycles
-      console.log('Fetching motorcycles...');
       const { data: motorcyclesData, error: motorcyclesError } = await supabase
         .from('motorcycles')
         .select('*')
         .eq('condominium_id', selectedCondominium.id);
 
       if (motorcyclesError) {
-        console.error('Error fetching motorcycles:', motorcyclesError);
-        toast.error('Erro ao carregar motocicletas: ' + motorcyclesError.message);
+        toast.error('Erro ao carregar motocicletas');
       } else {
-        console.log('Motorcycles fetched:', motorcyclesData);
         setMotorcycles(motorcyclesData || []);
       }
 
       // Fetch checklists
-      console.log('Fetching checklists...');
       const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
         .select('*')
@@ -65,16 +57,13 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
         .order('created_at', { ascending: false });
 
       if (checklistsError) {
-        console.error('Error fetching checklists:', checklistsError);
-        toast.error('Erro ao carregar checklists: ' + checklistsError.message);
+        toast.error('Erro ao carregar checklists');
       } else {
-        console.log('Checklists fetched:', checklistsData);
         setChecklists(checklistsData || []);
       }
 
     } catch (error: any) {
-      console.error('Error in fetchData:', error);
-      toast.error('Erro ao carregar dados: ' + (error.message || 'Erro desconhecido'));
+      toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -95,8 +84,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             table: 'vigilantes',
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
-          (payload) => {
-            console.log('Vigilantes real-time change:', payload);
+          () => {
             fetchData(); // Refetch data when changes occur
           }
         )
@@ -112,8 +100,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             table: 'motorcycles',
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
-          (payload) => {
-            console.log('Motorcycles real-time change:', payload);
+          () => {
             fetchData(); // Refetch data when changes occur
           }
         )
@@ -129,8 +116,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             table: 'checklists',
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
-          (payload) => {
-            console.log('Checklists real-time change:', payload);
+          () => {
             fetchData(); // Refetch data when changes occur
           }
         )
