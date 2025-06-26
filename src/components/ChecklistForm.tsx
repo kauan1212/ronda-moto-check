@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Motorcycle, Condominium } from '@/types';
 import { toast } from 'sonner';
@@ -47,7 +46,11 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
     cleaning_observation: '',
     leaks_status: '',
     leaks_observation: '',
-    motorcycle_photos: [] as string[],
+    // Fotos específicas da motocicleta
+    photo_front: '',
+    photo_back: '',
+    photo_left: '',
+    photo_right: '',
     fuel_level: 0,
     fuel_photos: [] as string[],
     motorcycle_km: '',
@@ -58,7 +61,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
   });
 
   const [showCamera, setShowCamera] = useState(false);
-  const [cameraType, setCameraType] = useState<'face' | 'motorcycle' | 'fuel' | 'km'>('face');
+  const [cameraType, setCameraType] = useState<'face' | 'front' | 'back' | 'left' | 'right' | 'fuel' | 'km'>('face');
   const [showSignature, setShowSignature] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -113,7 +116,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
     }
   };
 
-  const openCamera = (type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
+  const openCamera = (type: 'face' | 'front' | 'back' | 'left' | 'right' | 'fuel' | 'km') => {
     setCameraType(type);
     setShowCamera(true);
   };
@@ -123,11 +126,17 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
       case 'face':
         setFormData(prev => ({ ...prev, face_photo: imageData }));
         break;
-      case 'motorcycle':
-        setFormData(prev => ({ 
-          ...prev, 
-          motorcycle_photos: [...prev.motorcycle_photos, imageData] 
-        }));
+      case 'front':
+        setFormData(prev => ({ ...prev, photo_front: imageData }));
+        break;
+      case 'back':
+        setFormData(prev => ({ ...prev, photo_back: imageData }));
+        break;
+      case 'left':
+        setFormData(prev => ({ ...prev, photo_left: imageData }));
+        break;
+      case 'right':
+        setFormData(prev => ({ ...prev, photo_right: imageData }));
         break;
       case 'fuel':
         setFormData(prev => ({ 
@@ -170,11 +179,20 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         return;
       }
 
+      // Criar array de fotos da motocicleta com as novas fotos específicas
+      const motorcycle_photos = [
+        formData.photo_front,
+        formData.photo_back,
+        formData.photo_left,
+        formData.photo_right
+      ].filter(photo => photo !== '');
+
       const checklistData = {
         ...formData,
         condominium_id: selectedCondominiumId,
         vigilante_name: selectedVigilante.name,
         motorcycle_plate: selectedMotorcycle.plate,
+        motorcycle_photos,
         status: 'completed',
         completed_at: new Date().toISOString()
       };
@@ -211,7 +229,10 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         cleaning_observation: '',
         leaks_status: '',
         leaks_observation: '',
-        motorcycle_photos: [],
+        photo_front: '',
+        photo_back: '',
+        photo_left: '',
+        photo_right: '',
         fuel_level: 0,
         fuel_photos: [],
         motorcycle_km: '',
@@ -237,8 +258,23 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       case 'needs_repair':
         return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'na':
+        return <Minus className="h-4 w-4 text-gray-600" />;
       default:
         return null;
+    }
+  };
+
+  const getCameraTitle = () => {
+    switch (cameraType) {
+      case 'face': return 'Foto Facial';
+      case 'front': return 'Foto Frontal da Motocicleta';
+      case 'back': return 'Foto Traseira da Motocicleta';
+      case 'left': return 'Foto Lateral Esquerda da Motocicleta';
+      case 'right': return 'Foto Lateral Direita da Motocicleta';
+      case 'fuel': return 'Foto do Combustível';
+      case 'km': return 'Foto do Hodômetro';
+      default: return 'Capturar Foto';
     }
   };
 
@@ -247,11 +283,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
       <CameraCapture
         onCapture={handlePhotoCapture}
         onCancel={() => setShowCamera(false)}
-        title={
-          cameraType === 'face' ? 'Foto Facial' :
-          cameraType === 'motorcycle' ? 'Foto da Motocicleta' :
-          cameraType === 'fuel' ? 'Foto do Combustível' : 'Foto do Hodômetro'
-        }
+        title={getCameraTitle()}
       />
     );
   }
@@ -419,7 +451,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                         ...prev, 
                         [`${item.key}_status`]: value 
                       }))}
-                      className="flex flex-col sm:flex-row gap-4"
+                      className="grid grid-cols-2 sm:grid-cols-4 gap-4"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="good" id={`${item.key}-good`} />
@@ -432,6 +464,10 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="needs_repair" id={`${item.key}-repair`} />
                         <Label htmlFor={`${item.key}-repair`} className="text-red-700">Precisa Reparo</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="na" id={`${item.key}-na`} />
+                        <Label htmlFor={`${item.key}-na`} className="text-gray-700">N/A</Label>
                       </div>
                     </RadioGroup>
                     <Textarea
@@ -454,32 +490,109 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                 <CardTitle>Fotos e Medições</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Fotos da Motocicleta */}
+                {/* Fotos Específicas da Motocicleta */}
                 <div>
-                  <Label>Fotos da Motocicleta</Label>
-                  <div className="flex flex-col gap-3 mt-2">
-                    <Button
-                      type="button"
-                      onClick={() => openCamera('motorcycle')}
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Adicionar Foto
-                    </Button>
-                    {formData.motorcycle_photos.length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {formData.motorcycle_photos.map((photo, index) => (
-                          <div key={index} className="w-full h-20 border rounded-lg overflow-hidden">
+                  <Label className="text-base font-medium mb-4 block">Fotos da Motocicleta</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Foto Frontal */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Foto Frontal</Label>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => openCamera('front')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          {formData.photo_front ? 'Refazer' : 'Tirar Foto'}
+                        </Button>
+                        {formData.photo_front && (
+                          <div className="w-full h-20 border rounded-lg overflow-hidden">
                             <img 
-                              src={photo} 
-                              alt={`Motocicleta ${index + 1}`} 
+                              src={formData.photo_front} 
+                              alt="Foto frontal" 
                               className="w-full h-full object-cover"
                             />
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Foto Traseira */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Foto Traseira</Label>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => openCamera('back')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          {formData.photo_back ? 'Refazer' : 'Tirar Foto'}
+                        </Button>
+                        {formData.photo_back && (
+                          <div className="w-full h-20 border rounded-lg overflow-hidden">
+                            <img 
+                              src={formData.photo_back} 
+                              alt="Foto traseira" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Foto Lateral Esquerda */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Foto Lateral Esquerda</Label>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => openCamera('left')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          {formData.photo_left ? 'Refazer' : 'Tirar Foto'}
+                        </Button>
+                        {formData.photo_left && (
+                          <div className="w-full h-20 border rounded-lg overflow-hidden">
+                            <img 
+                              src={formData.photo_left} 
+                              alt="Foto lateral esquerda" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Foto Lateral Direita */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Foto Lateral Direita</Label>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => openCamera('right')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          {formData.photo_right ? 'Refazer' : 'Tirar Foto'}
+                        </Button>
+                        {formData.photo_right && (
+                          <div className="w-full h-20 border rounded-lg overflow-hidden">
+                            <img 
+                              src={formData.photo_right} 
+                              alt="Foto lateral direita" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

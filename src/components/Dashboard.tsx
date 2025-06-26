@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import Layout from './Layout';
 import VigilanteManagement from './VigilanteManagement';
 import MotorcycleManagement from './MotorcycleManagement';
+import ChecklistManagement from './ChecklistManagement';
 
 interface DashboardProps {
   selectedCondominium: Condominium;
@@ -188,7 +189,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
         {/* Management Tabs */}
         <Tabs defaultValue="vigilantes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="vigilantes" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Vigilantes
@@ -196,6 +197,10 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             <TabsTrigger value="motorcycles" className="flex items-center gap-2">
               <Bike className="h-4 w-4" />
               Motocicletas
+            </TabsTrigger>
+            <TabsTrigger value="checklists" className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4" />
+              Checklists
             </TabsTrigger>
           </TabsList>
           
@@ -211,6 +216,14 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             <MotorcycleManagement 
               condominium={selectedCondominium} 
               motorcycles={motorcycles}
+              onUpdate={fetchData}
+            />
+          </TabsContent>
+
+          <TabsContent value="checklists" className="mt-6">
+            <ChecklistManagement 
+              condominium={selectedCondominium} 
+              checklists={checklists}
               onUpdate={fetchData}
             />
           </TabsContent>

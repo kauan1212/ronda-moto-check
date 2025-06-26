@@ -44,7 +44,7 @@ export interface Motorcycle {
 }
 
 export interface ChecklistItem {
-  status: 'good' | 'regular' | 'needs_repair';
+  status: 'good' | 'regular' | 'needs_repair' | 'na';
   observation: string;
 }
 
