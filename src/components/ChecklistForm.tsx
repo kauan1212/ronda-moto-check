@@ -213,7 +213,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         damages: formData.damages || null,
         signature: formData.signature,
         status: 'completed',
-        condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id
+        condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id,
+        fuel_level: formData.fuel_level
       };
 
       console.log('Salvando checklist com dados:', checklistData);
@@ -586,9 +587,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       />
 
       <FuelSection
-        fuelLevel={formData.fuel_level}
         fuelPhotos={formData.fuel_photos}
-        onFuelLevelChange={(value) => updateFormData({ fuel_level: value })}
         onCaptureClick={() => setShowFuelCamera(true)}
         onRemovePhoto={(index) => removePhoto(index, 'fuel')}
       />
