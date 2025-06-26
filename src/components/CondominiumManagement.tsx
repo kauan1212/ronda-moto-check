@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,7 @@ interface CondominiumManagementProps {
 }
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -76,12 +75,18 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   const onSubmit = async (values: CondominiumForm) => {
     try {
-      // Sanitize input data
+      if (!user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
+      // Sanitize input data and add user_id
       const condominiumData = {
         name: values.name.trim(),
         address: values.address?.trim() || null,
         phone: values.phone?.trim() || null,
         email: values.email?.trim() || null,
+        user_id: user.id, // Add the current user's ID
       };
 
       if (editingCondominium) {
