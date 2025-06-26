@@ -327,7 +327,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
       console.log('Checklist salvo com sucesso:', data);
       toast.success('Checklist salvo com sucesso!');
       
-      // Reset form
+      // Reset form - CORREÇÃO: Adicionada propriedade fuel_level que estava faltando
       setFormData({
         vigilante_id: '',
         motorcycle_id: '',
@@ -355,6 +355,7 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         photo_back: '',
         photo_left: '',
         photo_right: '',
+        fuel_level: 0, // CORREÇÃO: Propriedade que estava faltando
         fuel_photos: [],
         motorcycle_km: '',
         km_photos: [],
@@ -427,7 +428,6 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
   return (
     <Layout title="Checklist de Vistoria" onBack={onBack}>
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-        {/* Seleção de Condomínio */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
@@ -544,10 +544,8 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
           </CardContent>
         </Card>
 
-        {/* Resto dos campos só aparece se condomínio for selecionado */}
         {selectedCondominiumId && (
           <>
-            {/* Verificação de Itens */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center text-lg">
@@ -611,119 +609,47 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
               </CardContent>
             </Card>
 
-            {/* Fotos e Medições */}
             <Card>
               <CardHeader>
                 <CardTitle>Fotos e Medições</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Fotos Específicas da Motocicleta */}
                 <div>
                   <Label className="text-base font-medium mb-4 block">Fotos da Motocicleta</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Foto Frontal */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Foto Frontal</Label>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => openCamera('front')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          {formData.photo_front ? 'Refazer' : 'Tirar Foto'}
-                        </Button>
-                        {formData.photo_front && (
-                          <div className="w-full h-20 border rounded-lg overflow-hidden">
-                            <img 
-                              src={formData.photo_front} 
-                              alt="Foto frontal" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
+                    {[
+                      { key: 'front', label: 'Foto Frontal' },
+                      { key: 'back', label: 'Foto Traseira' },
+                      { key: 'left', label: 'Foto Lateral Esquerda' },
+                      { key: 'right', label: 'Foto Lateral Direita' }
+                    ].map((photo) => (
+                      <div key={photo.key} className="space-y-2">
+                        <Label className="text-sm">{photo.label}</Label>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => openCamera(photo.key as any)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            {formData[`photo_${photo.key}` as keyof typeof formData] ? 'Refazer' : 'Tirar Foto'}
+                          </Button>
+                          {formData[`photo_${photo.key}` as keyof typeof formData] && (
+                            <div className="w-full h-20 border rounded-lg overflow-hidden">
+                              <img 
+                                src={formData[`photo_${photo.key}` as keyof typeof formData] as string} 
+                                alt={photo.label} 
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Foto Traseira */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Foto Traseira</Label>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => openCamera('back')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          {formData.photo_back ? 'Refazer' : 'Tirar Foto'}
-                        </Button>
-                        {formData.photo_back && (
-                          <div className="w-full h-20 border rounded-lg overflow-hidden">
-                            <img 
-                              src={formData.photo_back} 
-                              alt="Foto traseira" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Foto Lateral Esquerda */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Foto Lateral Esquerda</Label>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => openCamera('left')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          {formData.photo_left ? 'Refazer' : 'Tirar Foto'}
-                        </Button>
-                        {formData.photo_left && (
-                          <div className="w-full h-20 border rounded-lg overflow-hidden">
-                            <img 
-                              src={formData.photo_left} 
-                              alt="Foto lateral esquerda" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Foto Lateral Direita */}
-                    <div className="space-y-2">
-                      <Label className="text-sm">Foto Lateral Direita</Label>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => openCamera('right')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          {formData.photo_right ? 'Refazer' : 'Tirar Foto'}
-                        </Button>
-                        {formData.photo_right && (
-                          <div className="w-full h-20 border rounded-lg overflow-hidden">
-                            <img 
-                              src={formData.photo_right} 
-                              alt="Foto lateral direita" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Combustível - Apenas Foto */}
                 <div>
                   <Label className="text-base font-medium">Combustível</Label>
                   <div className="flex gap-3 mt-2">
@@ -749,7 +675,6 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                   </div>
                 </div>
 
-                {/* Quilometragem */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="motorcycle_km">Quilometragem</Label>
@@ -788,7 +713,6 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
               </CardContent>
             </Card>
 
-            {/* Observações e Assinatura */}
             <Card>
               <CardHeader>
                 <CardTitle>Observações e Assinatura</CardTitle>
@@ -841,7 +765,6 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
               </CardContent>
             </Card>
 
-            {/* Botões de Ação */}
             <Card>
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
