@@ -21,142 +21,176 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      console.log('Starting fetchData for condominium:', selectedCondominium.id);
-      setLoading(true);
+      console.log('Fetching data for condominium:', selectedCondominium.id);
+      setError(null);
 
-      // Fetch vigilantes
-      console.log('Fetching vigilantes...');
-      const { data: vigilantesData, error: vigilantesError } = await supabase
-        .from('vigilantes')
-        .select('*')
-        .eq('condominium_id', selectedCondominium.id);
+      // Fetch all data in parallel
+      const [vigilantesResult, motorcyclesResult, checklistsResult] = await Promise.all([
+        supabase
+          .from('vigilantes')
+          .select('*')
+          .eq('condominium_id', selectedCondominium.id),
+        supabase
+          .from('motorcycles')
+          .select('*')
+          .eq('condominium_id', selectedCondominium.id),
+        supabase
+          .from('checklists')
+          .select('*')
+          .eq('condominium_id', selectedCondominium.id)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (vigilantesError) {
-        console.error('Error fetching vigilantes:', vigilantesError);
-        toast.error('Erro ao carregar vigilantes');
-      } else {
-        console.log('Vigilantes fetched:', vigilantesData?.length || 0);
-        setVigilantes(vigilantesData || []);
+      // Handle vigilantes
+      if (vigilantesResult.error) {
+        console.error('Error fetching vigilantes:', vigilantesResult.error);
+        throw new Error('Erro ao carregar vigilantes');
       }
+      setVigilantes(vigilantesResult.data || []);
 
-      // Fetch motorcycles
-      console.log('Fetching motorcycles...');
-      const { data: motorcyclesData, error: motorcyclesError } = await supabase
-        .from('motorcycles')
-        .select('*')
-        .eq('condominium_id', selectedCondominium.id);
-
-      if (motorcyclesError) {
-        console.error('Error fetching motorcycles:', motorcyclesError);
-        toast.error('Erro ao carregar motocicletas');
-      } else {
-        console.log('Motorcycles fetched:', motorcyclesData?.length || 0);
-        setMotorcycles(motorcyclesData || []);
+      // Handle motorcycles
+      if (motorcyclesResult.error) {
+        console.error('Error fetching motorcycles:', motorcyclesResult.error);
+        throw new Error('Erro ao carregar motocicletas');
       }
+      setMotorcycles(motorcyclesResult.data || []);
 
-      // Fetch checklists
-      console.log('Fetching checklists...');
-      const { data: checklistsData, error: checklistsError } = await supabase
-        .from('checklists')
-        .select('*')
-        .eq('condominium_id', selectedCondominium.id)
-        .order('created_at', { ascending: false });
-
-      if (checklistsError) {
-        console.error('Error fetching checklists:', checklistsError);
-        toast.error('Erro ao carregar checklists');
-      } else {
-        console.log('Checklists fetched:', checklistsData?.length || 0);
-        setChecklists(checklistsData || []);
+      // Handle checklists
+      if (checklistsResult.error) {
+        console.error('Error fetching checklists:', checklistsResult.error);
+        throw new Error('Erro ao carregar checklists');
       }
+      setChecklists(checklistsResult.data || []);
 
-      console.log('All data fetched successfully');
+      console.log('Data loaded successfully:', {
+        vigilantes: vigilantesResult.data?.length || 0,
+        motorcycles: motorcyclesResult.data?.length || 0,
+        checklists: checklistsResult.data?.length || 0
+      });
+
     } catch (error: any) {
-      console.error('Unexpected error in fetchData:', error);
-      toast.error('Erro ao carregar dados');
+      console.error('Error in fetchData:', error);
+      setError(error.message || 'Erro ao carregar dados');
+      toast.error(error.message || 'Erro ao carregar dados');
     } finally {
-      console.log('Setting loading to false');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (selectedCondominium?.id) {
-      console.log('useEffect triggered for condominium:', selectedCondominium.id);
-      fetchData();
-
-      // Set up real-time subscriptions for data sync across devices
-      const vigilantesChannel = supabase
-        .channel('vigilantes_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'vigilantes',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
-          },
-          () => {
-            console.log('Vigilantes changed, refetching data');
-            fetchData(); // Refetch data when changes occur
-          }
-        )
-        .subscribe();
-
-      const motorcyclesChannel = supabase
-        .channel('motorcycles_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'motorcycles',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
-          },
-          () => {
-            console.log('Motorcycles changed, refetching data');
-            fetchData(); // Refetch data when changes occur
-          }
-        )
-        .subscribe();
-
-      const checklistsChannel = supabase
-        .channel('checklists_changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'checklists',
-            filter: `condominium_id=eq.${selectedCondominium.id}`
-          },
-          () => {
-            console.log('Checklists changed, refetching data');
-            fetchData(); // Refetch data when changes occur
-          }
-        )
-        .subscribe();
-
-      // Cleanup subscriptions on unmount
-      return () => {
-        console.log('Cleaning up subscriptions');
-        supabase.removeChannel(vigilantesChannel);
-        supabase.removeChannel(motorcyclesChannel);
-        supabase.removeChannel(checklistsChannel);
-      };
+    if (!selectedCondominium?.id) {
+      console.error('No condominium selected');
+      setLoading(false);
+      return;
     }
-  }, [selectedCondominium?.id]);
 
-  console.log('Dashboard render - loading:', loading, 'condominium:', selectedCondominium?.name);
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMounted) {
+        setLoading(true);
+        await fetchData();
+      }
+    };
+
+    loadData();
+
+    // Set up real-time subscriptions
+    const vigilantesChannel = supabase
+      .channel(`vigilantes_${selectedCondominium.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vigilantes',
+          filter: `condominium_id=eq.${selectedCondominium.id}`
+        },
+        () => {
+          console.log('Vigilantes changed, refetching...');
+          if (isMounted) {
+            fetchData();
+          }
+        }
+      )
+      .subscribe();
+
+    const motorcyclesChannel = supabase
+      .channel(`motorcycles_${selectedCondominium.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'motorcycles',
+          filter: `condominium_id=eq.${selectedCondominium.id}`
+        },
+        () => {
+          console.log('Motorcycles changed, refetching...');
+          if (isMounted) {
+            fetchData();
+          }
+        }
+      )
+      .subscribe();
+
+    const checklistsChannel = supabase
+      .channel(`checklists_${selectedCondominium.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checklists',
+          filter: `condominium_id=eq.${selectedCondominium.id}`
+        },
+        () => {
+          console.log('Checklists changed, refetching...');
+          if (isMounted) {
+            fetchData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      console.log('Cleaning up subscriptions');
+      supabase.removeChannel(vigilantesChannel);
+      supabase.removeChannel(motorcyclesChannel);
+      supabase.removeChannel(checklistsChannel);
+    };
+  }, [selectedCondominium.id]);
 
   if (loading) {
     return (
       <Layout title={selectedCondominium.name} onBack={onBack}>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Carregando dados...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout title={selectedCondominium.name} onBack={onBack}>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="text-lg text-red-600">Erro: {error}</div>
+          <button 
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchData();
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Tentar Novamente
+          </button>
         </div>
       </Layout>
     );

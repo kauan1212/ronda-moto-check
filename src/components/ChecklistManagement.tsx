@@ -19,6 +19,12 @@ interface ChecklistManagementProps {
 const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistManagementProps) => {
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
 
+  console.log('ChecklistManagement render:', { 
+    condominium: condominium?.name, 
+    checklistsLength: checklists?.length,
+    checklistsType: typeof checklists
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'good':
@@ -35,21 +41,6 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'good':
-        return <CheckSquare className="h-4 w-4 text-green-600" />;
-      case 'regular':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'needs_repair':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'na':
-        return <Minus className="h-4 w-4 text-gray-600" />;
-      default:
-        return null;
-    }
-  };
-
   const getTypeBadge = (type: string) => {
     return type === 'start' ? (
       <Badge className="bg-blue-100 text-blue-800">Início do Turno</Badge>
@@ -58,25 +49,8 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
     );
   };
 
-  if (!checklists) {
-    console.log('Checklists is null or undefined');
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckSquare className="h-5 w-5" />
-            Checklists - {condominium.name}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Carregando checklists...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Garantir que checklists seja sempre um array
+  const safeChecklists = Array.isArray(checklists) ? checklists : [];
 
   return (
     <div className="space-y-6">
@@ -89,14 +63,14 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {checklists.length === 0 ? (
+            {safeChecklists.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhum checklist encontrado</p>
               </div>
             ) : (
               <div className="grid gap-4">
-                {checklists.map((checklist) => (
+                {safeChecklists.map((checklist) => (
                   <Card key={checklist.id} className="border-l-4 border-l-blue-500">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
