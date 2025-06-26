@@ -2,7 +2,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, X, RotateCcw, Upload, Check } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -100,7 +99,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) {
-      toast.error('Câmera não está pronta');
       return;
     }
 
@@ -109,20 +107,17 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     const context = canvas.getContext('2d');
 
     if (!context) {
-      toast.error('Erro ao capturar foto');
       return;
     }
 
     // Verificar se o vídeo está rodando
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      toast.error('Aguarde a câmera carregar completamente');
       return;
     }
 
     const { videoWidth, videoHeight } = video;
     
     if (videoWidth === 0 || videoHeight === 0) {
-      toast.error('Erro nas dimensões do vídeo');
       return;
     }
 
@@ -138,7 +133,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     setCapturedImage(imageData);
     
     console.log('Foto capturada com sucesso');
-    toast.success('Foto capturada!');
   }, []);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {

@@ -3,20 +3,261 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Sistema de Checklist - Vigilância Condomínio</title>
     <meta name="description" content="Sistema de gestão de checklist para vigilantes de condomínio" />
     <meta name="author" content="Vigilância Condomínio" />
 
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Vigio System">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="msapplication-TileColor" content="#2563eb">
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" href="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png">
+    <link rel="apple-touch-icon" href="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Open Graph -->
     <meta property="og:title" content="Sistema de Checklist - Vigilância Condomínio" />
     <meta property="og:description" content="Sistema de gestão de checklist para vigilantes de condomínio" />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vigio System" />
+    <meta name="twitter:description" content="Sistema de gestão de checklist para vigilantes de condomínio" />
+    <meta name="twitter:image" content="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" />
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" as="image">
+
+    <style>
+      /* Critical CSS para melhor performance */
+      * {
+        box-sizing: border-box;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        touch-action: manipulation;
+        overscroll-behavior: none;
+      }
+      
+      #root {
+        min-height: 100vh;
+        width: 100%;
+      }
+
+      /* PWA Install Prompt Styles */
+      .pwa-install-prompt {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2563eb;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        max-width: 90vw;
+      }
+      
+      .pwa-install-prompt.show {
+        display: flex;
+      }
+      
+      .pwa-install-btn {
+        background: white;
+        color: #2563eb;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      
+      .pwa-close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Loading Screen */
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      
+      .loading-logo {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        border-radius: 12px;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid #2563eb;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+      <img src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" alt="Vigio System" class="loading-logo">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 16px; color: #64748b; font-size: 14px;">Carregando...</p>
+    </div>
+
+    <!-- PWA Install Prompt -->
+    <div id="pwa-install-prompt" class="pwa-install-prompt">
+      <span>📱 Instale o Vigio System para melhor experiência</span>
+      <button id="pwa-install-btn" class="pwa-install-btn">Instalar</button>
+      <button id="pwa-close-btn" class="pwa-close-btn">×</button>
+    </div>
+
     <div id="root"></div>
+    
     <script type="module" src="/src/main.tsx"></script>
+    
+    <script>
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+
+      // PWA Install Prompt
+      let deferredPrompt;
+      const installPrompt = document.getElementById('pwa-install-prompt');
+      const installBtn = document.getElementById('pwa-install-btn');
+      const closeBtn = document.getElementById('pwa-close-btn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show install prompt after 3 seconds if not dismissed
+        setTimeout(() => {
+          if (!localStorage.getItem('pwa-dismissed')) {
+            installPrompt.classList.add('show');
+          }
+        }, 3000);
+      });
+
+      installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(`User response to the install prompt: ${outcome}`);
+          deferredPrompt = null;
+        }
+        installPrompt.classList.remove('show');
+      });
+
+      closeBtn.addEventListener('click', () => {
+        installPrompt.classList.remove('show');
+        localStorage.setItem('pwa-dismissed', 'true');
+      });
+
+      // Hide loading screen when app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 300);
+          }
+        }, 1000);
+      });
+
+      // iOS Safari specific handling
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+        setTimeout(() => {
+          if (!localStorage.getItem('ios-pwa-dismissed')) {
+            const iosPrompt = document.createElement('div');
+            iosPrompt.style.cssText = `
+              position: fixed;
+              bottom: 20px;
+              left: 20px;
+              right: 20px;
+              background: #007AFF;
+              color: white;
+              padding: 16px;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+              z-index: 1000;
+              font-size: 14px;
+              text-align: center;
+            `;
+            iosPrompt.innerHTML = `
+              <div style="margin-bottom: 12px;">📱 Instale o Vigio System</div>
+              <div style="font-size: 12px; opacity: 0.9; margin-bottom: 12px;">
+                Toque em <strong>⬆️ Compartilhar</strong> e depois em <strong>📱 Adicionar à Tela Inicial</strong>
+              </div>
+              <button onclick="this.parentElement.remove(); localStorage.setItem('ios-pwa-dismissed', 'true')" 
+                      style="background: white; color: #007AFF; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600;">
+                Entendi
+              </button>
+            `;
+            document.body.appendChild(iosPrompt);
+          }
+        }, 5000);
+      }
+    </script>
   </body>
 </html>
