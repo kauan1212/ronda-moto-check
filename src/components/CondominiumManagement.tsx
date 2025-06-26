@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, MapPin, Phone, Mail, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium } from '@/types';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuth } from '@/hooks/useAuth';
 
 const condominiumSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome deve ter no máximo 100 caracteres'),
@@ -28,6 +28,7 @@ interface CondominiumManagementProps {
 }
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
+  const { signOut } = useAuth();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -158,6 +159,15 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     form.reset();
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      toast.error('Erro ao fazer logout');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
@@ -173,15 +183,26 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8 pt-8">
-          <div className="flex items-center justify-center mb-4">
-            <img 
-              src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
-              alt="Grupo Celdan Facilities" 
-              className="h-16 w-16 rounded-lg shadow-lg"
-            />
-            <h1 className="text-4xl font-bold text-slate-800 ml-4">
-              Sistema de Vigilância
-            </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-center flex-1">
+              <img 
+                src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
+                alt="Grupo Celdan Facilities" 
+                className="h-16 w-16 rounded-lg shadow-lg"
+              />
+              <h1 className="text-4xl font-bold text-slate-800 ml-4">
+                Sistema de Vigilância
+              </h1>
+            </div>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
           </div>
           <p className="text-xl text-slate-600 mb-4">
             Gerencie e selecione o condomínio para acessar o painel administrativo
