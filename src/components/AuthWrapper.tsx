@@ -25,7 +25,7 @@ const AuthWrapper = () => {
 
   console.log('User found:', user.email, 'isAdmin:', isAdmin);
 
-  if (isAdmin && user.email === 'kauankg@hotmail.com') {
+  if (isAdmin) {
     console.log('Showing AdminPanel for admin user');
     return <AdminPanel onLogout={() => window.location.reload()} />;
   }

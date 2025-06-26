@@ -23,7 +23,7 @@ export const useAuth = () => {
 
     // Function to update auth state
     const updateAuthState = async (session: Session | null) => {
-      console.log('updateAuthState called with session:', session);
+      console.log('updateAuthState called with session:', session?.user?.email);
       
       if (!mounted) {
         console.log('Component unmounted, skipping update');
@@ -33,12 +33,30 @@ export const useAuth = () => {
       if (session?.user) {
         console.log('User found, checking admin status for:', session.user.email);
         
+        // Check if this is the admin user
+        const isAdminUser = session.user.email === 'kauankg@hotmail.com';
+        
+        // Set auth state immediately for admin user
+        if (isAdminUser) {
+          console.log('Admin user detected, setting auth state');
+          if (mounted) {
+            setAuthState({
+              user: session.user,
+              session,
+              loading: false,
+              isAdmin: true,
+            });
+          }
+          return;
+        }
+
+        // For non-admin users, try to fetch profile but don't block on it
         try {
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
           
           console.log('Profile query result:', { profile, error });
           
@@ -55,8 +73,9 @@ export const useAuth = () => {
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
+          // Even if profile fetch fails, set the user as authenticated
           if (mounted) {
-            console.log('Error occurred, setting auth state with isAdmin: false');
+            console.log('Profile fetch failed, setting auth state with isAdmin: false');
             setAuthState({
               user: session.user,
               session,
@@ -82,9 +101,9 @@ export const useAuth = () => {
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, 'Session:', session?.user?.email);
-        await updateAuthState(session);
+        updateAuthState(session);
       }
     );
 
