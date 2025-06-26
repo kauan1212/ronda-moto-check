@@ -23,28 +23,40 @@ export const useAuth = () => {
 
     // Function to update auth state
     const updateAuthState = async (session: Session | null) => {
-      if (!mounted) return;
+      console.log('updateAuthState called with session:', session);
+      
+      if (!mounted) {
+        console.log('Component unmounted, skipping update');
+        return;
+      }
 
       if (session?.user) {
-        // Check if user is admin
+        console.log('User found, checking admin status for:', session.user.email);
+        
         try {
-          const { data: profile } = await supabase
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', session.user.id)
             .single();
           
+          console.log('Profile query result:', { profile, error });
+          
           if (mounted) {
+            const isAdmin = profile?.is_admin || false;
+            console.log('Setting auth state - isAdmin:', isAdmin);
+            
             setAuthState({
               user: session.user,
               session,
               loading: false,
-              isAdmin: profile?.is_admin || false,
+              isAdmin,
             });
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
           if (mounted) {
+            console.log('Error occurred, setting auth state with isAdmin: false');
             setAuthState({
               user: session.user,
               session,
@@ -54,6 +66,7 @@ export const useAuth = () => {
           }
         }
       } else {
+        console.log('No user in session, setting auth state to logged out');
         if (mounted) {
           setAuthState({
             user: null,
@@ -65,30 +78,37 @@ export const useAuth = () => {
       }
     };
 
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event, 'Session:', session?.user?.email);
         await updateAuthState(session);
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('Checking for existing session...');
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('getSession result:', { session: session?.user?.email, error });
       updateAuthState(session);
     });
 
     return () => {
+      console.log('Cleaning up auth hook...');
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting to sign in with email:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    console.log('Sign in result:', { error });
     return { error };
   };
 
@@ -112,6 +132,8 @@ export const useAuth = () => {
     const { error } = await supabase.auth.signOut();
     return { error };
   };
+
+  console.log('Current auth state:', authState);
 
   return {
     ...authState,
