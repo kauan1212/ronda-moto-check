@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -263,9 +265,6 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         signature: '',
         fuel_level: 0
       });
-      
-      // Não chama onComplete() aqui para evitar redirecionamento
-      // Em vez disso, apenas mostra uma mensagem de sucesso
       
     } catch (error) {
       console.error('Erro inesperado:', error);
@@ -681,20 +680,28 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor={`${item.key}_status`}>Status</Label>
-                  <Select 
+                  <RadioGroup 
                     value={formData[`${item.key}_status` as keyof ChecklistFormData] as string} 
                     onValueChange={(value) => setFormData({...formData, [`${item.key}_status`]: value})}
+                    className="flex flex-wrap gap-4 mt-2"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="good">Bom</SelectItem>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="needs_repair">Precisa Reparo</SelectItem>
-                      <SelectItem value="na">N/A</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="good" id={`${item.key}_good`} />
+                      <Label htmlFor={`${item.key}_good`} className="text-green-600 font-medium">Bom</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="regular" id={`${item.key}_regular`} />
+                      <Label htmlFor={`${item.key}_regular`} className="text-yellow-600 font-medium">Regular</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="needs_repair" id={`${item.key}_repair`} />
+                      <Label htmlFor={`${item.key}_repair`} className="text-red-600 font-medium">Precisa Reparo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="na" id={`${item.key}_na`} />
+                      <Label htmlFor={`${item.key}_na`} className="text-gray-600 font-medium">N/A</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 <div>
                   <Label htmlFor={`${item.key}_observation`}>Observação</Label>

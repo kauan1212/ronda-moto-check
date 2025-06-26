@@ -1,7 +1,8 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, X, RotateCcw, Upload } from 'lucide-react';
+import { Camera, X, RotateCcw, Upload, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -13,101 +14,93 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [error, setError] = useState<string | null>(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+  }, []);
 
   const startCamera = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setError(null);
-      setIsVideoReady(false);
-      
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      // Cleanup any existing stream
+      cleanup();
 
-      // Detectar se é mobile para usar configurações otimizadas
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      const constraints = {
+      const constraints: MediaStreamConstraints = {
         video: {
-          facingMode: { ideal: facingMode },
-          width: isMobile ? { ideal: 1280, max: 1920 } : { ideal: 1280 },
-          height: isMobile ? { ideal: 720, max: 1080 } : { ideal: 720 }
+          facingMode: facingMode,
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
         },
         audio: false
       };
 
-      console.log('Tentando acessar câmera:', constraints);
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(mediaStream);
+      console.log('Solicitando acesso à câmera...');
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        
-        // Configurações essenciais para mobile
-        videoRef.current.setAttribute('playsinline', 'true');
-        videoRef.current.setAttribute('muted', 'true');
-        videoRef.current.setAttribute('autoplay', 'true');
-        videoRef.current.muted = true;
-        videoRef.current.playsInline = true;
-        
-        // Aguardar o vídeo carregar completamente
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-        }
-        
-        // Aguardar metadados carregarem
-        await new Promise((resolve) => {
-          if (videoRef.current) {
-            const onLoadedMetadata = () => {
-              console.log('Vídeo pronto:', {
-                videoWidth: videoRef.current?.videoWidth,
-                videoHeight: videoRef.current?.videoHeight,
-                readyState: videoRef.current?.readyState
-              });
-              setIsVideoReady(true);
-              resolve(true);
-            };
-            
-            if (videoRef.current.readyState >= 1) {
-              onLoadedMetadata();
-            } else {
-              videoRef.current.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
-            }
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao acessar câmera:', error);
-      setError('Câmera não disponível. Use a opção galeria.');
-      setIsVideoReady(false);
-    }
-  }, [facingMode, stream]);
+      streamRef.current = stream;
+      setHasPermission(true);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        setCapturedImage(imageData);
-        setIsCapturing(true);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        
+        // Aguardar o vídeo carregar
+        const loadPromise = new Promise<void>((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error('Video element not found'));
+            return;
+          }
+
+          const onLoadedMetadata = () => {
+            console.log('Câmera carregada com sucesso');
+            setIsLoading(false);
+            resolve();
+          };
+
+          const onError = () => {
+            reject(new Error('Erro ao carregar vídeo'));
+          };
+
+          videoRef.current.addEventListener('loadedmetadata', onLoadedMetadata);
+          videoRef.current.addEventListener('error', onError);
+
+          // Tentar reproduzir o vídeo
+          videoRef.current.play().catch(reject);
+
+          // Timeout de segurança
+          setTimeout(() => {
+            if (videoRef.current?.readyState >= 2) {
+              onLoadedMetadata();
+            }
+          }, 1000);
+        });
+
+        await loadPromise;
+      }
+    } catch (err) {
+      console.error('Erro ao acessar câmera:', err);
+      setHasPermission(false);
+      setError('Não foi possível acessar a câmera. Use a galeria ou verifique as permissões.');
+      setIsLoading(false);
     }
-  };
+  }, [facingMode, cleanup]);
 
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || !isVideoReady) {
-      console.error('Vídeo não está pronto para captura');
-      setError('Aguarde o carregamento da câmera');
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error('Câmera não está pronta');
       return;
     }
 
@@ -116,83 +109,108 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     const context = canvas.getContext('2d');
 
     if (!context) {
-      console.error('Contexto do canvas não disponível');
+      toast.error('Erro ao capturar foto');
       return;
     }
 
-    // Obter dimensões reais do vídeo
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    
-    if (videoWidth === 0 || videoHeight === 0) {
-      console.error('Dimensões do vídeo inválidas');
-      setError('Erro na captura. Tente novamente.');
+    // Verificar se o vídeo está rodando
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      toast.error('Aguarde a câmera carregar completamente');
       return;
     }
+
+    const { videoWidth, videoHeight } = video;
     
-    console.log('Capturando com dimensões:', { videoWidth, videoHeight });
-    
+    if (videoWidth === 0 || videoHeight === 0) {
+      toast.error('Erro nas dimensões do vídeo');
+      return;
+    }
+
     // Configurar canvas
     canvas.width = videoWidth;
     canvas.height = videoHeight;
-    
-    // Desenhar frame atual do vídeo
+
+    // Capturar frame
     context.drawImage(video, 0, 0, videoWidth, videoHeight);
     
     // Converter para base64
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
     setCapturedImage(imageData);
-    setIsCapturing(true);
-    setError(null);
     
     console.log('Foto capturada com sucesso');
-  }, [isVideoReady]);
+    toast.success('Foto capturada!');
+  }, []);
 
-  const confirmCapture = () => {
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setCapturedImage(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const confirmCapture = useCallback(() => {
     if (capturedImage) {
-      console.log('Confirmando captura');
       onCapture(capturedImage);
       cleanup();
     }
-  };
+  }, [capturedImage, onCapture, cleanup]);
 
-  const retakePhoto = () => {
-    console.log('Refazendo foto');
+  const retakePhoto = useCallback(() => {
     setCapturedImage(null);
-    setIsCapturing(false);
-    setError(null);
-  };
+  }, []);
 
-  const switchCamera = () => {
-    console.log('Trocando câmera');
+  const switchCamera = useCallback(() => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  };
-
-  const cleanup = () => {
-    console.log('Limpando recursos');
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setCapturedImage(null);
-    setIsCapturing(false);
-    setError(null);
-    setIsVideoReady(false);
-  };
+  }, []);
 
   useEffect(() => {
     startCamera();
-    
-    return () => {
-      cleanup();
-    };
-  }, [startCamera]);
+    return cleanup;
+  }, [startCamera, cleanup]);
+
+  // Se não há permissão, mostrar opções
+  if (hasPermission === false) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full text-center">
+          <Camera className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+          <h3 className="text-lg font-semibold mb-2">Câmera não disponível</h3>
+          <p className="text-gray-600 mb-6">
+            Não foi possível acessar a câmera. Você pode selecionar uma foto da galeria.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onCancel} className="flex-1">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Galeria
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={startCamera}
+            className="w-full mt-3"
+          >
+            Tentar Câmera Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 bg-black/80 text-white">
+      <div className="flex justify-between items-center p-4 bg-black/90 text-white">
         <Button
           variant="ghost"
           size="icon"
@@ -205,7 +223,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
           <X className="h-6 w-6" />
         </Button>
         <h2 className="text-lg font-semibold">{title}</h2>
-        {stream && !error && !isCapturing && (
+        {!isLoading && !error && !capturedImage && (
           <Button
             variant="ghost"
             size="icon"
@@ -220,25 +238,23 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       {/* Camera/Image view */}
       <div className="flex-1 relative overflow-hidden bg-black">
         {error ? (
-          <div className="flex flex-col items-center justify-center h-full text-white p-8">
-            <p className="text-center mb-6 text-red-300">{error}</p>
+          <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center">
+            <p className="mb-4 text-red-300">{error}</p>
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-blue-600 hover:bg-blue-700 mb-4"
-              size="lg"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Upload className="h-5 w-5 mr-2" />
+              <Upload className="h-4 w-4 mr-2" />
               Selecionar da Galeria
             </Button>
-            <Button
-              onClick={startCamera}
-              variant="outline"
-              className="text-white border-white hover:bg-white/20"
-            >
-              Tentar Câmera Novamente
-            </Button>
           </div>
-        ) : !isCapturing ? (
+        ) : capturedImage ? (
+          <img
+            src={capturedImage}
+            alt="Foto capturada"
+            className="w-full h-full object-cover"
+          />
+        ) : (
           <>
             <video
               ref={videoRef}
@@ -246,10 +262,9 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
               playsInline
               muted
               autoPlay
-              style={{ backgroundColor: '#000' }}
             />
-            {!isVideoReady && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black">
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                 <div className="text-white text-center">
                   <div className="animate-spin w-8 h-8 border-2 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
                   <p>Carregando câmera...</p>
@@ -257,25 +272,34 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
               </div>
             )}
           </>
-        ) : (
-          <img
-            src={capturedImage || ''}
-            alt="Foto capturada"
-            className="w-full h-full object-cover"
-          />
         )}
         
-        <canvas
-          ref={canvasRef}
-          className="hidden"
-        />
+        <canvas ref={canvasRef} className="hidden" />
       </div>
 
       {/* Controls */}
-      <div className="p-6 bg-black/80">
-        {!isCapturing ? (
+      <div className="p-6 bg-black/90">
+        {capturedImage ? (
+          <div className="flex justify-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={retakePhoto}
+              className="flex-1 max-w-xs text-white border-white hover:bg-white/20"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Refazer
+            </Button>
+            <Button
+              onClick={confirmCapture}
+              className="flex-1 max-w-xs bg-green-600 hover:bg-green-700"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Confirmar
+            </Button>
+          </div>
+        ) : (
           <div className="flex justify-center items-center space-x-4">
-            {isVideoReady && !error && (
+            {!isLoading && !error && (
               <Button
                 size="lg"
                 onClick={capturePhoto}
@@ -291,23 +315,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
             >
               <Upload className="h-4 w-4 mr-2" />
               Galeria
-            </Button>
-          </div>
-        ) : (
-          <div className="flex justify-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={retakePhoto}
-              className="flex-1 max-w-xs text-white border-white hover:bg-white/20"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Refazer
-            </Button>
-            <Button
-              onClick={confirmCapture}
-              className="flex-1 max-w-xs bg-green-600 hover:bg-green-700"
-            >
-              Confirmar
             </Button>
           </div>
         )}
