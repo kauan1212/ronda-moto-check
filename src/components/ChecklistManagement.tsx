@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Eye, Calendar, User, Bike, CheckSquare, AlertTriangle, XCircle, Minus } from 'lucide-react';
+import { Eye, Calendar, User, Bike, CheckSquare } from 'lucide-react';
 import { Condominium, Checklist } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,14 +16,8 @@ interface ChecklistManagementProps {
   onUpdate: () => void;
 }
 
-const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistManagementProps) => {
+const ChecklistManagement = ({ condominium, checklists }: ChecklistManagementProps) => {
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
-
-  console.log('ChecklistManagement render:', { 
-    condominium: condominium?.name, 
-    checklistsLength: checklists?.length,
-    checklistsType: typeof checklists
-  });
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -49,7 +43,6 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
     );
   };
 
-  // Garantir que checklists seja sempre um array
   const safeChecklists = Array.isArray(checklists) ? checklists : [];
 
   return (
@@ -91,156 +84,154 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
                             {format(new Date(checklist.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedChecklist(checklist)}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Detalhes
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Detalhes do Checklist</DialogTitle>
-                              </DialogHeader>
-                              {selectedChecklist && (
-                                <div className="space-y-6">
-                                  {/* Informações Básicas */}
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                      <Label className="text-sm font-medium">Vigilante</Label>
-                                      <p>{selectedChecklist.vigilante_name}</p>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium">Motocicleta</Label>
-                                      <p>{selectedChecklist.motorcycle_plate}</p>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium">Tipo</Label>
-                                      <div className="mt-1">{getTypeBadge(selectedChecklist.type)}</div>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium">Data/Hora</Label>
-                                      <p>{format(new Date(selectedChecklist.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedChecklist(checklist)}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver Detalhes
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Detalhes do Checklist</DialogTitle>
+                            </DialogHeader>
+                            {selectedChecklist && (
+                              <div className="space-y-6">
+                                {/* Informações Básicas */}
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <Label className="text-sm font-medium">Vigilante</Label>
+                                    <p>{selectedChecklist.vigilante_name}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Motocicleta</Label>
+                                    <p>{selectedChecklist.motorcycle_plate}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Tipo</Label>
+                                    <div className="mt-1">{getTypeBadge(selectedChecklist.type)}</div>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium">Data/Hora</Label>
+                                    <p>{format(new Date(selectedChecklist.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                                  </div>
+                                </div>
+
+                                {/* Foto Facial */}
+                                {selectedChecklist.face_photo && (
+                                  <div>
+                                    <Label className="text-sm font-medium">Foto Facial</Label>
+                                    <div className="mt-2">
+                                      <img 
+                                        src={selectedChecklist.face_photo} 
+                                        alt="Foto facial" 
+                                        className="w-32 h-32 object-cover rounded-lg border"
+                                      />
                                     </div>
                                   </div>
+                                )}
 
-                                  {/* Foto Facial */}
-                                  {selectedChecklist.face_photo && (
-                                    <div>
-                                      <Label className="text-sm font-medium">Foto Facial</Label>
-                                      <div className="mt-2">
-                                        <img 
-                                          src={selectedChecklist.face_photo} 
-                                          alt="Foto facial" 
-                                          className="w-32 h-32 object-cover rounded-lg border"
-                                        />
+                                {/* Status dos Itens */}
+                                <div>
+                                  <Label className="text-sm font-medium mb-3 block">Status dos Itens Verificados</Label>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {[
+                                      { key: 'tires', label: 'Pneus', status: selectedChecklist.tires_status, obs: selectedChecklist.tires_observation },
+                                      { key: 'brakes', label: 'Freios', status: selectedChecklist.brakes_status, obs: selectedChecklist.brakes_observation },
+                                      { key: 'engine_oil', label: 'Óleo do Motor', status: selectedChecklist.engine_oil_status, obs: selectedChecklist.engine_oil_observation },
+                                      { key: 'coolant', label: 'Líquido de Arrefecimento', status: selectedChecklist.coolant_status, obs: selectedChecklist.coolant_observation },
+                                      { key: 'lights', label: 'Luzes', status: selectedChecklist.lights_status, obs: selectedChecklist.lights_observation },
+                                      { key: 'electrical', label: 'Sistema Elétrico', status: selectedChecklist.electrical_status, obs: selectedChecklist.electrical_observation },
+                                      { key: 'suspension', label: 'Suspensão', status: selectedChecklist.suspension_status, obs: selectedChecklist.suspension_observation },
+                                      { key: 'cleaning', label: 'Limpeza', status: selectedChecklist.cleaning_status, obs: selectedChecklist.cleaning_observation },
+                                      { key: 'leaks', label: 'Vazamentos', status: selectedChecklist.leaks_status, obs: selectedChecklist.leaks_observation }
+                                    ].map((item) => (
+                                      <div key={item.key} className="p-3 border rounded-lg">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="font-medium">{item.label}</span>
+                                          {getStatusBadge(item.status || '')}
+                                        </div>
+                                        {item.obs && (
+                                          <p className="text-sm text-muted-foreground">{item.obs}</p>
+                                        )}
                                       </div>
-                                    </div>
-                                  )}
+                                    ))}
+                                  </div>
+                                </div>
 
-                                  {/* Status dos Itens */}
+                                {/* Fotos da Motocicleta */}
+                                {selectedChecklist.motorcycle_photos && selectedChecklist.motorcycle_photos.length > 0 && (
                                   <div>
-                                    <Label className="text-sm font-medium mb-3 block">Status dos Itens Verificados</Label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      {[
-                                        { key: 'tires', label: 'Pneus', status: selectedChecklist.tires_status, obs: selectedChecklist.tires_observation },
-                                        { key: 'brakes', label: 'Freios', status: selectedChecklist.brakes_status, obs: selectedChecklist.brakes_observation },
-                                        { key: 'engine_oil', label: 'Óleo do Motor', status: selectedChecklist.engine_oil_status, obs: selectedChecklist.engine_oil_observation },
-                                        { key: 'coolant', label: 'Líquido de Arrefecimento', status: selectedChecklist.coolant_status, obs: selectedChecklist.coolant_observation },
-                                        { key: 'lights', label: 'Luzes', status: selectedChecklist.lights_status, obs: selectedChecklist.lights_observation },
-                                        { key: 'electrical', label: 'Sistema Elétrico', status: selectedChecklist.electrical_status, obs: selectedChecklist.electrical_observation },
-                                        { key: 'suspension', label: 'Suspensão', status: selectedChecklist.suspension_status, obs: selectedChecklist.suspension_observation },
-                                        { key: 'cleaning', label: 'Limpeza', status: selectedChecklist.cleaning_status, obs: selectedChecklist.cleaning_observation },
-                                        { key: 'leaks', label: 'Vazamentos', status: selectedChecklist.leaks_status, obs: selectedChecklist.leaks_observation }
-                                      ].map((item) => (
-                                        <div key={item.key} className="p-3 border rounded-lg">
-                                          <div className="flex items-center justify-between mb-2">
-                                            <span className="font-medium">{item.label}</span>
-                                            {getStatusBadge(item.status || '')}
-                                          </div>
-                                          {item.obs && (
-                                            <p className="text-sm text-muted-foreground">{item.obs}</p>
-                                          )}
+                                    <Label className="text-sm font-medium mb-3 block">Fotos da Motocicleta</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                      {selectedChecklist.motorcycle_photos.map((photo, index) => (
+                                        <div key={index} className="aspect-square">
+                                          <img 
+                                            src={photo} 
+                                            alt={`Motocicleta ${index + 1}`} 
+                                            className="w-full h-full object-cover rounded-lg border"
+                                          />
                                         </div>
                                       ))}
                                     </div>
                                   </div>
+                                )}
 
-                                  {/* Fotos da Motocicleta */}
-                                  {selectedChecklist.motorcycle_photos && selectedChecklist.motorcycle_photos.length > 0 && (
+                                {/* Informações Adicionais */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {selectedChecklist.fuel_level !== null && (
                                     <div>
-                                      <Label className="text-sm font-medium mb-3 block">Fotos da Motocicleta</Label>
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {selectedChecklist.motorcycle_photos.map((photo, index) => (
-                                          <div key={index} className="aspect-square">
-                                            <img 
-                                              src={photo} 
-                                              alt={`Motocicleta ${index + 1}`} 
-                                              className="w-full h-full object-cover rounded-lg border"
-                                            />
-                                          </div>
-                                        ))}
-                                      </div>
+                                      <Label className="text-sm font-medium">Nível de Combustível</Label>
+                                      <p>{selectedChecklist.fuel_level}%</p>
                                     </div>
                                   )}
-
-                                  {/* Informações Adicionais */}
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {selectedChecklist.fuel_level !== null && (
-                                      <div>
-                                        <Label className="text-sm font-medium">Nível de Combustível</Label>
-                                        <p>{selectedChecklist.fuel_level}%</p>
-                                      </div>
-                                    )}
-                                    {selectedChecklist.motorcycle_km && (
-                                      <div>
-                                        <Label className="text-sm font-medium">Quilometragem</Label>
-                                        <p>{selectedChecklist.motorcycle_km}</p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Observações */}
-                                  {(selectedChecklist.general_observations || selectedChecklist.damages) && (
-                                    <div className="space-y-4">
-                                      {selectedChecklist.general_observations && (
-                                        <div>
-                                          <Label className="text-sm font-medium">Observações Gerais</Label>
-                                          <p className="mt-1 p-3 bg-gray-50 rounded-lg">{selectedChecklist.general_observations}</p>
-                                        </div>
-                                      )}
-                                      {selectedChecklist.damages && (
-                                        <div>
-                                          <Label className="text-sm font-medium">Danos ou Problemas</Label>
-                                          <p className="mt-1 p-3 bg-red-50 rounded-lg text-red-900">{selectedChecklist.damages}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Assinatura */}
-                                  {selectedChecklist.signature && (
+                                  {selectedChecklist.motorcycle_km && (
                                     <div>
-                                      <Label className="text-sm font-medium">Assinatura</Label>
-                                      <div className="mt-2">
-                                        <img 
-                                          src={selectedChecklist.signature} 
-                                          alt="Assinatura" 
-                                          className="w-48 h-24 object-contain border rounded-lg bg-white"
-                                        />
-                                      </div>
+                                      <Label className="text-sm font-medium">Quilometragem</Label>
+                                      <p>{selectedChecklist.motorcycle_km}</p>
                                     </div>
                                   )}
                                 </div>
-                              )}
-                            </DialogContent>
-                          </Dialog>
-                        </div>
+
+                                {/* Observações */}
+                                {(selectedChecklist.general_observations || selectedChecklist.damages) && (
+                                  <div className="space-y-4">
+                                    {selectedChecklist.general_observations && (
+                                      <div>
+                                        <Label className="text-sm font-medium">Observações Gerais</Label>
+                                        <p className="mt-1 p-3 bg-gray-50 rounded-lg">{selectedChecklist.general_observations}</p>
+                                      </div>
+                                    )}
+                                    {selectedChecklist.damages && (
+                                      <div>
+                                        <Label className="text-sm font-medium">Danos ou Problemas</Label>
+                                        <p className="mt-1 p-3 bg-red-50 rounded-lg text-red-900">{selectedChecklist.damages}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Assinatura */}
+                                {selectedChecklist.signature && (
+                                  <div>
+                                    <Label className="text-sm font-medium">Assinatura</Label>
+                                    <div className="mt-2">
+                                      <img 
+                                        src={selectedChecklist.signature} 
+                                        alt="Assinatura" 
+                                        className="w-48 h-24 object-contain border rounded-lg bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </CardContent>
                   </Card>
