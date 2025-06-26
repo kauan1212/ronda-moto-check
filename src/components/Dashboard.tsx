@@ -24,33 +24,41 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
   const fetchData = async () => {
     try {
+      console.log('Starting fetchData for condominium:', selectedCondominium.id);
       setLoading(true);
 
       // Fetch vigilantes
+      console.log('Fetching vigilantes...');
       const { data: vigilantesData, error: vigilantesError } = await supabase
         .from('vigilantes')
         .select('*')
         .eq('condominium_id', selectedCondominium.id);
 
       if (vigilantesError) {
+        console.error('Error fetching vigilantes:', vigilantesError);
         toast.error('Erro ao carregar vigilantes');
       } else {
+        console.log('Vigilantes fetched:', vigilantesData?.length || 0);
         setVigilantes(vigilantesData || []);
       }
 
       // Fetch motorcycles
+      console.log('Fetching motorcycles...');
       const { data: motorcyclesData, error: motorcyclesError } = await supabase
         .from('motorcycles')
         .select('*')
         .eq('condominium_id', selectedCondominium.id);
 
       if (motorcyclesError) {
+        console.error('Error fetching motorcycles:', motorcyclesError);
         toast.error('Erro ao carregar motocicletas');
       } else {
+        console.log('Motorcycles fetched:', motorcyclesData?.length || 0);
         setMotorcycles(motorcyclesData || []);
       }
 
       // Fetch checklists
+      console.log('Fetching checklists...');
       const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
         .select('*')
@@ -58,20 +66,26 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
         .order('created_at', { ascending: false });
 
       if (checklistsError) {
+        console.error('Error fetching checklists:', checklistsError);
         toast.error('Erro ao carregar checklists');
       } else {
+        console.log('Checklists fetched:', checklistsData?.length || 0);
         setChecklists(checklistsData || []);
       }
 
+      console.log('All data fetched successfully');
     } catch (error: any) {
+      console.error('Unexpected error in fetchData:', error);
       toast.error('Erro ao carregar dados');
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
 
   useEffect(() => {
     if (selectedCondominium?.id) {
+      console.log('useEffect triggered for condominium:', selectedCondominium.id);
       fetchData();
 
       // Set up real-time subscriptions for data sync across devices
@@ -86,6 +100,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           () => {
+            console.log('Vigilantes changed, refetching data');
             fetchData(); // Refetch data when changes occur
           }
         )
@@ -102,6 +117,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           () => {
+            console.log('Motorcycles changed, refetching data');
             fetchData(); // Refetch data when changes occur
           }
         )
@@ -118,6 +134,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           () => {
+            console.log('Checklists changed, refetching data');
             fetchData(); // Refetch data when changes occur
           }
         )
@@ -125,12 +142,15 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
       // Cleanup subscriptions on unmount
       return () => {
+        console.log('Cleaning up subscriptions');
         supabase.removeChannel(vigilantesChannel);
         supabase.removeChannel(motorcyclesChannel);
         supabase.removeChannel(checklistsChannel);
       };
     }
   }, [selectedCondominium?.id]);
+
+  console.log('Dashboard render - loading:', loading, 'condominium:', selectedCondominium?.name);
 
   if (loading) {
     return (

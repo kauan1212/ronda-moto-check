@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Eye, Download, Calendar, User, Bike, CheckSquare, AlertTriangle, XCircle, Minus } from 'lucide-react';
+import { Eye, Calendar, User, Bike, CheckSquare, AlertTriangle, XCircle, Minus } from 'lucide-react';
 import { Condominium, Checklist } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -57,6 +57,26 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
       <Badge className="bg-purple-100 text-purple-800">Fim do Turno</Badge>
     );
   };
+
+  if (!checklists) {
+    console.log('Checklists is null or undefined');
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5" />
+            Checklists - {condominium.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Carregando checklists...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
