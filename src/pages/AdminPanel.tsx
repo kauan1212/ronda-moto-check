@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
@@ -12,17 +11,25 @@ import CondominiumSelector from '@/components/CondominiumSelector';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 const AdminPanel = () => {
+  const { user } = useAuth();
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
 
   const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
-    queryKey: ['condominiums'],
+    queryKey: ['condominiums', user?.id],
     queryFn: async () => {
-      console.log('Fetching condominiums...');
+      if (!user) {
+        console.log('No user found, skipping condominiums fetch');
+        return [];
+      }
+      
+      console.log('Fetching condominiums for user:', user.id);
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
+        .eq('user_id', user.id) // Garantir filtro por user_id
         .order('name');
       
       if (error) {
@@ -32,7 +39,8 @@ const AdminPanel = () => {
       
       console.log('Fetched condominiums:', data?.length);
       return data as Condominium[];
-    }
+    },
+    enabled: !!user
   });
 
   const { data: vigilantes = [], refetch: refetchVigilantes } = useQuery({
@@ -95,6 +103,11 @@ const AdminPanel = () => {
   };
 
   const handleCondominiumSelect = (condominium: Condominium) => {
+    // Verificar se o condomínio pertence ao usuário atual
+    if (condominium.user_id !== user?.id) {
+      console.warn('Attempted to select condominium not owned by user');
+      return;
+    }
     setSelectedCondominiumId(condominium.id);
   };
 

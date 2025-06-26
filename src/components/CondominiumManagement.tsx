@@ -50,11 +50,18 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   const fetchCondominiums = async () => {
     try {
-      console.log('Fetching condominiums for current user...');
+      if (!user) {
+        console.log('No user found, skipping fetch');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching condominiums for user:', user.id, user.email);
       
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
+        .eq('user_id', user.id) // Garantir filtro explícito por user_id
         .order('name');
 
       if (error) {
@@ -63,7 +70,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
         return;
       }
 
-      console.log('Fetched condominiums:', data?.length || 0);
+      console.log('Fetched condominiums:', data?.length || 0, 'for user:', user.id);
       setCondominiums(data || []);
     } catch (error) {
       console.error('Unexpected error fetching condominiums:', error);
@@ -82,7 +89,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
       console.log('Saving condominium with user_id:', user.id);
 
-      // Sanitize input data and ensure user_id is set
+      // Garantir que o user_id seja sempre definido como o usuário atual
       const condominiumData = {
         name: values.name.trim(),
         address: values.address?.trim() || null,
@@ -96,7 +103,8 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
         const { error } = await supabase
           .from('condominiums')
           .update(condominiumData)
-          .eq('id', editingCondominium.id);
+          .eq('id', editingCondominium.id)
+          .eq('user_id', user.id); // Garantir que só pode editar próprios condomínios
 
         if (error) {
           console.error('Error updating condominium:', error);
@@ -104,7 +112,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
         }
         toast.success('Condomínio atualizado com sucesso!');
       } else {
-        console.log('Creating new condominium');
+        console.log('Creating new condominium for user:', user.id);
         const { error } = await supabase
           .from('condominiums')
           .insert([condominiumData]);
@@ -127,6 +135,12 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   };
 
   const handleEdit = (condominium: Condominium) => {
+    // Verificar se o condomínio pertence ao usuário atual
+    if (condominium.user_id !== user?.id) {
+      toast.error('Você não tem permissão para editar este condomínio');
+      return;
+    }
+    
     setEditingCondominium(condominium);
     form.reset({
       name: condominium.name,
@@ -138,16 +152,23 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   };
 
   const handleDelete = async (condominium: Condominium) => {
+    // Verificar se o condomínio pertence ao usuário atual
+    if (condominium.user_id !== user?.id) {
+      toast.error('Você não tem permissão para deletar este condomínio');
+      return;
+    }
+
     if (!confirm(`Tem certeza que deseja excluir o condomínio "${condominium.name}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
 
     try {
-      console.log('Deleting condominium:', condominium.id);
+      console.log('Deleting condominium:', condominium.id, 'for user:', user?.id);
       const { error } = await supabase
         .from('condominiums')
         .delete()
-        .eq('id', condominium.id);
+        .eq('id', condominium.id)
+        .eq('user_id', user?.id); // Garantir que só pode deletar próprios condomínios
 
       if (error) {
         console.error('Error deleting condominium:', error);
