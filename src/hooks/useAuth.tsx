@@ -20,23 +20,20 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
+    let isUpdating = false;
 
     // Function to update auth state
     const updateAuthState = async (session: Session | null) => {
-      if (!mounted) return;
-
-      if (session?.user) {
-        try {
-          // Check if user is admin by checking the profiles table
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', session.user.id)
-            .single();
+      if (!mounted || isUpdating) return;
+      
+      isUpdating = true;
+      
+      try {
+        if (session?.user) {
+          // Check if user is admin
+          const isAdmin = session.user.email === 'kauankg@hotmail.com';
           
           if (mounted) {
-            const isAdmin = profile?.is_admin || session.user.email === 'kauankg@hotmail.com';
-            
             setAuthState({
               user: session.user,
               session,
@@ -44,27 +41,45 @@ export const useAuth = () => {
               isAdmin,
             });
           }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
+        } else {
           if (mounted) {
-            const isAdmin = session.user.email === 'kauankg@hotmail.com';
-            
             setAuthState({
-              user: session.user,
-              session,
+              user: null,
+              session: null,
               loading: false,
-              isAdmin,
+              isAdmin: false,
             });
           }
         }
-      } else {
+      } catch (error) {
+        console.error('Error updating auth state:', error);
         if (mounted) {
-          setAuthState({
-            user: null,
-            session: null,
+          setAuthState(prev => ({
+            ...prev,
             loading: false,
-            isAdmin: false,
-          });
+          }));
+        }
+      } finally {
+        isUpdating = false;
+      }
+    };
+
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          if (mounted) {
+            setAuthState(prev => ({ ...prev, loading: false }));
+          }
+          return;
+        }
+        await updateAuthState(session);
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        if (mounted) {
+          setAuthState(prev => ({ ...prev, loading: false }));
         }
       }
     };
@@ -77,10 +92,8 @@ export const useAuth = () => {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      updateAuthState(session);
-    });
+    // Get initial session
+    getInitialSession();
 
     return () => {
       mounted = false;

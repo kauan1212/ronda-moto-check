@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Bike, CheckSquare, RefreshCw } from 'lucide-react';
+import { Users, Bike, CheckSquare, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
@@ -17,66 +17,36 @@ interface DashboardProps {
   onBack: () => void;
 }
 
-interface DashboardState {
-  vigilantes: Vigilante[];
-  motorcycles: Motorcycle[];
-  checklists: Checklist[];
-  loading: boolean;
-  error: string | null;
-  initialized: boolean;
-}
-
 const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
-  const [state, setState] = useState<DashboardState>({
-    vigilantes: [],
-    motorcycles: [],
-    checklists: [],
-    loading: true,
-    error: null,
-    initialized: false,
-  });
-
-  const isLoadingRef = useRef(false);
+  const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
+  const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
+  const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  
   const mountedRef = useRef(true);
-
-  const setLoading = useCallback((loading: boolean) => {
-    if (mountedRef.current) {
-      setState(prev => ({ ...prev, loading }));
-      isLoadingRef.current = loading;
-    }
-  }, []);
-
-  const setError = useCallback((error: string | null) => {
-    if (mountedRef.current) {
-      setState(prev => ({ ...prev, error, loading: false }));
-      isLoadingRef.current = false;
-    }
-  }, []);
-
-  const setData = useCallback((data: Partial<Pick<DashboardState, 'vigilantes' | 'motorcycles' | 'checklists'>>) => {
-    if (mountedRef.current) {
-      setState(prev => ({
-        ...prev,
-        ...data,
-        loading: false,
-        error: null,
-        initialized: true,
-      }));
-      isLoadingRef.current = false;
-    }
-  }, []);
+  const dataFetchedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
-    if (!selectedCondominium?.id || isLoadingRef.current) {
-      console.log('Skipping fetch - no condominium or already loading');
+    if (!selectedCondominium?.id || !mountedRef.current) {
+      console.log('Skipping fetch - no condominium or component unmounted');
+      return;
+    }
+
+    // Prevent multiple concurrent fetches
+    if (dataFetchedRef.current && loading) {
+      console.log('Fetch already in progress, skipping...');
       return;
     }
 
     console.log('Starting data fetch for condominium:', selectedCondominium.id);
-    setLoading(true);
-    setError(null);
-
+    
     try {
+      setLoading(true);
+      setError(null);
+      dataFetchedRef.current = true;
+
       const [vigilantesResult, motorcyclesResult, checklistsResult] = await Promise.all([
         supabase
           .from('vigilantes')
@@ -112,23 +82,29 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
         checklists: checklistsResult.data?.length || 0
       });
 
-      setData({
-        vigilantes: vigilantesResult.data || [],
-        motorcycles: motorcyclesResult.data || [],
-        checklists: checklistsResult.data || []
-      });
+      if (mountedRef.current) {
+        setVigilantes(vigilantesResult.data || []);
+        setMotorcycles(motorcyclesResult.data || []);
+        setChecklists(checklistsResult.data || []);
+        setLoading(false);
+        setRetryCount(0);
+      }
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
       if (mountedRef.current) {
         setError(error.message || 'Erro ao carregar dados');
+        setLoading(false);
         toast.error(error.message || 'Erro ao carregar dados');
       }
+    } finally {
+      dataFetchedRef.current = false;
     }
-  }, [selectedCondominium.id, setLoading, setError, setData]);
+  }, [selectedCondominium.id]);
 
   const handleRetry = useCallback(() => {
     console.log('Retrying data fetch...');
+    setRetryCount(prev => prev + 1);
     fetchData();
   }, [fetchData]);
 
@@ -143,95 +119,39 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
     };
   }, [fetchData]);
 
-  // Real-time subscriptions
+  // Add timeout fallback for loading state
   useEffect(() => {
-    if (!selectedCondominium?.id || !state.initialized) {
-      return;
-    }
+    const timeout = setTimeout(() => {
+      if (loading && mountedRef.current) {
+        console.log('Loading timeout reached, showing error');
+        setError('Tempo limite excedido ao carregar dados');
+        setLoading(false);
+      }
+    }, 10000); // 10 seconds timeout
 
-    console.log('Setting up real-time subscriptions');
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
-    const vigilantesChannel = supabase
-      .channel(`vigilantes_${selectedCondominium.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'vigilantes',
-          filter: `condominium_id=eq.${selectedCondominium.id}`
-        },
-        () => {
-          console.log('Vigilantes changed, refetching...');
-          if (!isLoadingRef.current) {
-            fetchData();
-          }
-        }
-      )
-      .subscribe();
-
-    const motorcyclesChannel = supabase
-      .channel(`motorcycles_${selectedCondominium.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'motorcycles',
-          filter: `condominium_id=eq.${selectedCondominium.id}`
-        },
-        () => {
-          console.log('Motorcycles changed, refetching...');
-          if (!isLoadingRef.current) {
-            fetchData();
-          }
-        }
-      )
-      .subscribe();
-
-    const checklistsChannel = supabase
-      .channel(`checklists_${selectedCondominium.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'checklists',
-          filter: `condominium_id=eq.${selectedCondominium.id}`
-        },
-        () => {
-          console.log('Checklists changed, refetching...');
-          if (!isLoadingRef.current) {
-            fetchData();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('Cleaning up subscriptions');
-      supabase.removeChannel(vigilantesChannel);
-      supabase.removeChannel(motorcyclesChannel);
-      supabase.removeChannel(checklistsChannel);
-    };
-  }, [selectedCondominium.id, state.initialized, fetchData]);
-
-  if (state.loading && !state.initialized) {
+  if (loading) {
     return (
       <Layout title={selectedCondominium.name} onBack={onBack}>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-          <div className="text-lg">Carregando dados...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="text-lg text-gray-700">Carregando dados...</div>
+          {retryCount > 0 && (
+            <div className="text-sm text-gray-500">Tentativa {retryCount}</div>
+          )}
         </div>
       </Layout>
     );
   }
 
-  if (state.error) {
+  if (error) {
     return (
       <Layout title={selectedCondominium.name} onBack={onBack}>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <div className="text-lg text-red-600">Erro: {state.error}</div>
+          <AlertCircle className="h-12 w-12 text-red-500" />
+          <div className="text-lg text-red-600 text-center">Erro: {error}</div>
           <Button onClick={handleRetry} className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />
             Tentar Novamente
@@ -252,9 +172,9 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{state.vigilantes.length}</div>
+              <div className="text-2xl font-bold">{vigilantes.length}</div>
               <p className="text-xs text-muted-foreground">
-                {state.vigilantes.filter(v => v.status === 'active').length} ativos
+                {vigilantes.filter(v => v.status === 'active').length} ativos
               </p>
             </CardContent>
           </Card>
@@ -265,9 +185,9 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
               <Bike className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{state.motorcycles.length}</div>
+              <div className="text-2xl font-bold">{motorcycles.length}</div>
               <p className="text-xs text-muted-foreground">
-                {state.motorcycles.filter(m => m.status === 'available').length} disponíveis
+                {motorcycles.filter(m => m.status === 'available').length} disponíveis
               </p>
             </CardContent>
           </Card>
@@ -278,7 +198,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
               <CheckSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{state.checklists.length}</div>
+              <div className="text-2xl font-bold">{checklists.length}</div>
               <p className="text-xs text-muted-foreground">
                 Este mês
               </p>
@@ -306,7 +226,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           <TabsContent value="vigilantes" className="mt-6">
             <VigilanteManagement 
               condominium={selectedCondominium} 
-              vigilantes={state.vigilantes}
+              vigilantes={vigilantes}
               onUpdate={fetchData}
             />
           </TabsContent>
@@ -314,7 +234,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           <TabsContent value="motorcycles" className="mt-6">
             <MotorcycleManagement 
               condominium={selectedCondominium} 
-              motorcycles={state.motorcycles}
+              motorcycles={motorcycles}
               onUpdate={fetchData}
             />
           </TabsContent>
@@ -322,7 +242,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           <TabsContent value="checklists" className="mt-6">
             <ChecklistManagement 
               condominium={selectedCondominium} 
-              checklists={state.checklists}
+              checklists={checklists}
               onUpdate={fetchData}
             />
           </TabsContent>
