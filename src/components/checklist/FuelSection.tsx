@@ -2,22 +2,16 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Camera, X } from 'lucide-react';
 
 interface FuelSectionProps {
-  fuelLevel: number;
   fuelPhotos: string[];
-  onFuelLevelChange: (value: number) => void;
   onCaptureClick: () => void;
   onRemovePhoto: (index: number) => void;
 }
 
 const FuelSection = ({ 
-  fuelLevel, 
   fuelPhotos, 
-  onFuelLevelChange, 
   onCaptureClick, 
   onRemovePhoto 
 }: FuelSectionProps) => {
@@ -26,19 +20,7 @@ const FuelSection = ({
       <CardHeader>
         <CardTitle>Combustível</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="fuel_level">Nível de Combustível (%)</Label>
-          <Input
-            type="number"
-            value={fuelLevel}
-            onChange={(e) => onFuelLevelChange(parseInt(e.target.value) || 0)}
-            min="0"
-            max="100"
-            placeholder="Nível em porcentagem"
-          />
-        </div>
-        
+      <CardContent className="space-y-4">        
         <Button
           type="button"
           onClick={onCaptureClick}

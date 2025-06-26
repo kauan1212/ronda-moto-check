@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, X, RotateCcw, Upload, Check } from 'lucide-react';
+import { Camera, X, RotateCcw, Check } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -12,7 +12,6 @@ interface CameraCaptureProps {
 const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraCaptureProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +34,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     setError(null);
     
     try {
-      // Cleanup any existing stream
       cleanup();
 
       const constraints: MediaStreamConstraints = {
@@ -56,7 +54,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Aguardar o vídeo carregar
         const loadPromise = new Promise<void>((resolve, reject) => {
           if (!videoRef.current) {
             reject(new Error('Video element not found'));
@@ -76,10 +73,8 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
           videoRef.current.addEventListener('loadedmetadata', onLoadedMetadata);
           videoRef.current.addEventListener('error', onError);
 
-          // Tentar reproduzir o vídeo
           videoRef.current.play().catch(reject);
 
-          // Timeout de segurança
           setTimeout(() => {
             if (videoRef.current?.readyState >= 2) {
               onLoadedMetadata();
@@ -92,7 +87,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     } catch (err) {
       console.error('Erro ao acessar câmera:', err);
       setHasPermission(false);
-      setError('Não foi possível acessar a câmera. Use a galeria ou verifique as permissões.');
+      setError('Não foi possível acessar a câmera. Verifique as permissões.');
       setIsLoading(false);
     }
   }, [facingMode, cleanup]);
@@ -110,7 +105,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       return;
     }
 
-    // Verificar se o vídeo está rodando
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       return;
     }
@@ -121,30 +115,12 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       return;
     }
 
-    // Configurar canvas
     canvas.width = videoWidth;
     canvas.height = videoHeight;
-
-    // Capturar frame
     context.drawImage(video, 0, 0, videoWidth, videoHeight);
     
-    // Converter para base64
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
     setCapturedImage(imageData);
-    
-    console.log('Foto capturada com sucesso');
-  }, []);
-
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setCapturedImage(result);
-      };
-      reader.readAsDataURL(file);
-    }
   }, []);
 
   const confirmCapture = useCallback(() => {
@@ -167,7 +143,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     return cleanup;
   }, [startCamera, cleanup]);
 
-  // Se não há permissão, mostrar opções
   if (hasPermission === false) {
     return (
       <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
@@ -175,27 +150,19 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
           <Camera className="h-12 w-12 mx-auto mb-4 text-blue-600" />
           <h3 className="text-lg font-semibold mb-2">Câmera não disponível</h3>
           <p className="text-gray-600 mb-6">
-            Não foi possível acessar a câmera. Você pode selecionar uma foto da galeria.
+            Não foi possível acessar a câmera. Verifique as permissões do navegador.
           </p>
           <div className="flex gap-3">
             <Button variant="outline" onClick={onCancel} className="flex-1">
               Cancelar
             </Button>
             <Button 
-              onClick={() => fileInputRef.current?.click()}
+              onClick={startCamera}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Galeria
+              Tentar Novamente
             </Button>
           </div>
-          <Button
-            variant="ghost"
-            onClick={startCamera}
-            className="w-full mt-3"
-          >
-            Tentar Câmera Novamente
-          </Button>
         </div>
       </div>
     );
@@ -203,7 +170,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 bg-black/90 text-white">
         <Button
           variant="ghost"
@@ -229,17 +195,15 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
         )}
       </div>
 
-      {/* Camera/Image view */}
       <div className="flex-1 relative overflow-hidden bg-black">
         {error ? (
           <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center">
             <p className="mb-4 text-red-300">{error}</p>
             <Button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={startCamera}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Selecionar da Galeria
+              Tentar Novamente
             </Button>
           </div>
         ) : capturedImage ? (
@@ -271,7 +235,6 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* Controls */}
       <div className="p-6 bg-black/90">
         {capturedImage ? (
           <div className="flex justify-center space-x-4">
@@ -292,7 +255,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
             </Button>
           </div>
         ) : (
-          <div className="flex justify-center items-center space-x-4">
+          <div className="flex justify-center items-center">
             {!isLoading && !error && (
               <Button
                 size="lg"
@@ -302,26 +265,9 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
                 <Camera className="h-8 w-8" />
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-white border-white hover:bg-white/20"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Galeria
-            </Button>
           </div>
         )}
       </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
     </div>
   );
 };

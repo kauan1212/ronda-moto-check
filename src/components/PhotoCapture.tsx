@@ -1,8 +1,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, X, RotateCcw, Upload, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { Camera, X, RotateCcw, Check } from 'lucide-react';
 
 interface PhotoCaptureProps {
   onCapture: (imageData: string) => void;
@@ -21,7 +20,6 @@ const PhotoCapture = ({
 }: PhotoCaptureProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
@@ -44,13 +42,12 @@ const PhotoCapture = ({
       }
       
       if (permission.state === 'denied') {
-        toast.error('Permissão da câmera negada. Use a galeria ou ative a câmera nas configurações.');
+        setShowPermissionDialog(true);
         return false;
       }
       
       return false;
     } catch (error) {
-      // Fallback para navegadores que não suportam Permissions API
       setShowPermissionDialog(true);
       return false;
     }
@@ -90,13 +87,12 @@ const PhotoCapture = ({
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
       setPermissionGranted(false);
-      toast.error('Erro ao acessar a câmera. Tente usar a galeria.');
+      setShowPermissionDialog(true);
     }
   }, [facingMode, stream]);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !isReady) {
-      toast.error('Câmera não está pronta');
       return;
     }
 
@@ -105,7 +101,6 @@ const PhotoCapture = ({
     const context = canvas.getContext('2d');
 
     if (!context) {
-      toast.error('Erro ao capturar foto');
       return;
     }
 
@@ -113,7 +108,6 @@ const PhotoCapture = ({
     const videoHeight = video.videoHeight;
     
     if (videoWidth === 0 || videoHeight === 0) {
-      toast.error('Erro nas dimensões do vídeo');
       return;
     }
     
@@ -123,8 +117,6 @@ const PhotoCapture = ({
     
     const imageData = canvas.toDataURL('image/jpeg', 0.85);
     setCapturedImage(imageData);
-    
-    console.log('Foto capturada com sucesso');
   }, [isReady]);
 
   const confirmCapture = () => {
@@ -140,18 +132,6 @@ const PhotoCapture = ({
 
   const switchCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  };
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result as string;
-        setCapturedImage(imageData);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const cleanup = () => {
@@ -198,8 +178,7 @@ const PhotoCapture = ({
           <Camera className="h-12 w-12 mx-auto mb-4 text-blue-600" />
           <h3 className="text-lg font-semibold mb-2">Permissão da Câmera</h3>
           <p className="text-gray-600 mb-6">
-            Este aplicativo precisa de acesso à câmera para capturar fotos. 
-            A permissão será solicitada apenas uma vez.
+            Este aplicativo precisa de acesso à câmera para capturar fotos.
           </p>
           <div className="flex gap-3">
             <Button 
@@ -216,14 +195,6 @@ const PhotoCapture = ({
               Permitir Câmera
             </Button>
           </div>
-          <Button
-            variant="ghost"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full mt-3"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Usar Galeria
-          </Button>
         </div>
       </div>
     );
@@ -231,7 +202,6 @@ const PhotoCapture = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 bg-black/90 text-white">
         <Button
           variant="ghost"
@@ -257,7 +227,6 @@ const PhotoCapture = ({
         )}
       </div>
 
-      {/* Photo count indicator */}
       {maxPhotos > 1 && (
         <div className="bg-black/90 text-white text-center py-2">
           <span className="text-sm">
@@ -266,7 +235,6 @@ const PhotoCapture = ({
         </div>
       )}
 
-      {/* Camera/Image view */}
       <div className="flex-1 relative overflow-hidden bg-black">
         {!capturedImage ? (
           <>
@@ -297,10 +265,9 @@ const PhotoCapture = ({
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      {/* Controls */}
       <div className="p-6 bg-black/90">
         {!capturedImage ? (
-          <div className="flex justify-center items-center space-x-4">
+          <div className="flex justify-center items-center">
             {isReady && permissionGranted && (
               <Button
                 size="lg"
@@ -310,14 +277,6 @@ const PhotoCapture = ({
                 <Camera className="h-8 w-8" />
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-white border-white hover:bg-white/20"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Galeria
-            </Button>
           </div>
         ) : (
           <div className="flex justify-center space-x-4">
@@ -339,15 +298,6 @@ const PhotoCapture = ({
           </div>
         )}
       </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
     </div>
   );
 };

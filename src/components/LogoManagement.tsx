@@ -10,9 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const LogoManagement = () => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
   const [uploading, setUploading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 
@@ -38,6 +38,9 @@ const LogoManagement = () => {
 
       if (data?.logo_url) {
         setLogoUrl(data.logo_url);
+      } else {
+        // Use default logo if no custom logo is set
+        setLogoUrl('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
       }
     } catch (error) {
       console.error('Erro ao carregar logo:', error);
@@ -50,13 +53,11 @@ const LogoManagement = () => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Validar tipo de arquivo
     if (!file.type.startsWith('image/')) {
       toast.error('Selecione apenas arquivos de imagem');
       return;
     }
 
-    // Validar tamanho (máximo 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('A imagem deve ter no máximo 2MB');
       return;
@@ -65,12 +66,10 @@ const LogoManagement = () => {
     setUploading(true);
 
     try {
-      // Converter para base64
       const reader = new FileReader();
       reader.onload = async (e) => {
         const imageData = e.target?.result as string;
         
-        // Salvar no perfil do usuário
         const { error } = await supabase
           .from('profiles')
           .update({ logo_url: imageData })
@@ -110,7 +109,7 @@ const LogoManagement = () => {
         return;
       }
 
-      setLogoUrl(null);
+      setLogoUrl('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
       toast.success('Logo removida com sucesso!');
     } catch (error) {
       console.error('Erro ao remover logo:', error);
@@ -148,53 +147,36 @@ const LogoManagement = () => {
 
         <div className="space-y-4">
           <Label>Logo Atual</Label>
-          {logoUrl ? (
-            <div className="space-y-4">
-              <div className="flex justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <img 
-                  src={logoUrl} 
-                  alt="Logo atual" 
-                  className="max-h-32 max-w-full object-contain"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="flex-1"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {uploading ? 'Enviando...' : 'Alterar Logo'}
-                </Button>
+          <div className="space-y-4">
+            <div className="flex justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+              <img 
+                src={logoUrl} 
+                alt="Logo atual" 
+                className="max-h-32 max-w-full object-contain"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? 'Enviando...' : 'Alterar Logo'}
+              </Button>
+              {logoUrl !== '/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png' && (
                 <Button
                   variant="destructive"
                   onClick={removeLogo}
                   disabled={uploading}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Remover
+                  Usar Padrão
                 </Button>
-              </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex justify-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <div className="text-center text-gray-500">
-                  <Image className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhuma logo configurada</p>
-                </div>
-              </div>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploading ? 'Enviando...' : 'Adicionar Logo'}
-              </Button>
-            </div>
-          )}
+          </div>
         </div>
 
         <input
