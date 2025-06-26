@@ -19,26 +19,42 @@ export const useAuth = () => {
   });
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (session?.user) {
-          // Check if user is admin
+    let mounted = true;
+
+    // Function to update auth state
+    const updateAuthState = async (session: Session | null) => {
+      if (!mounted) return;
+
+      if (session?.user) {
+        // Check if user is admin
+        try {
           const { data: profile } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', session.user.id)
             .single();
           
-          setAuthState({
-            user: session.user,
-            session,
-            loading: false,
-            isAdmin: profile?.is_admin || false,
-          });
-        } else {
+          if (mounted) {
+            setAuthState({
+              user: session.user,
+              session,
+              loading: false,
+              isAdmin: profile?.is_admin || false,
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+          if (mounted) {
+            setAuthState({
+              user: session.user,
+              session,
+              loading: false,
+              isAdmin: false,
+            });
+          }
+        }
+      } else {
+        if (mounted) {
           setAuthState({
             user: null,
             session: null,
@@ -47,36 +63,25 @@ export const useAuth = () => {
           });
         }
       }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        await updateAuthState(session);
+      }
     );
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Check if user is admin
-        supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            setAuthState({
-              user: session.user,
-              session,
-              loading: false,
-              isAdmin: profile?.is_admin || false,
-            });
-          });
-      } else {
-        setAuthState({
-          user: null,
-          session: null,
-          loading: false,
-          isAdmin: false,
-        });
-      }
+      updateAuthState(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
