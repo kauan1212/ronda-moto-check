@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Motorcycle } from '@/types';
 import CameraCapture from './CameraCapture';
 import SignatureCapture from './SignatureCapture';
-import { Camera, Download, Save, User, Bike, Calendar, Clock } from 'lucide-react';
+import { Camera, Download, Save, User, Bike, Calendar, Clock, X } from 'lucide-react';
 
 interface ChecklistFormData {
   vigilante_id: string;
@@ -86,6 +87,11 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
 
   const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
+  const [showFaceCamera, setShowFaceCamera] = useState(false);
+  const [showMotorcycleCamera, setShowMotorcycleCamera] = useState(false);
+  const [showFuelCamera, setShowFuelCamera] = useState(false);
+  const [showKmCamera, setShowKmCamera] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,6 +106,45 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
 
     fetchData();
   }, []);
+
+  const handlePhotoCapture = (photo: string, type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
+    switch (type) {
+      case 'face':
+        setFormData(prev => ({ ...prev, face_photo: photo }));
+        setShowFaceCamera(false);
+        break;
+      case 'motorcycle':
+        setFormData(prev => ({ ...prev, motorcycle_photos: [...prev.motorcycle_photos, photo] }));
+        setShowMotorcycleCamera(false);
+        break;
+      case 'fuel':
+        setFormData(prev => ({ ...prev, fuel_photos: [...prev.fuel_photos, photo] }));
+        setShowFuelCamera(false);
+        break;
+      case 'km':
+        setFormData(prev => ({ ...prev, km_photos: [...prev.km_photos, photo] }));
+        setShowKmCamera(false);
+        break;
+    }
+  };
+
+  const removePhoto = (index: number, type: 'motorcycle' | 'fuel' | 'km') => {
+    setFormData(prev => {
+      const newData = { ...prev };
+      switch (type) {
+        case 'motorcycle':
+          newData.motorcycle_photos = prev.motorcycle_photos.filter((_, i) => i !== index);
+          break;
+        case 'fuel':
+          newData.fuel_photos = prev.fuel_photos.filter((_, i) => i !== index);
+          break;
+        case 'km':
+          newData.km_photos = prev.km_photos.filter((_, i) => i !== index);
+          break;
+      }
+      return newData;
+    });
+  };
 
   const handleSave = async () => {
     if (!formData.vigilante_id || !formData.motorcycle_id) {
@@ -121,6 +166,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         return;
       }
 
+      // Convert empty strings to null to avoid constraint violations
       const checklistData = {
         vigilante_id: formData.vigilante_id,
         motorcycle_id: formData.motorcycle_id,
@@ -174,6 +220,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       console.log('Checklist salvo com sucesso:', data);
       toast.success('Checklist salvo com sucesso!');
       
+      // Reset form
       setFormData({
         vigilante_id: '',
         motorcycle_id: '',
@@ -509,6 +556,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         </div>
       </div>
 
+      {/* Seleção do Vigilante e Motocicleta */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -566,6 +614,280 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         </CardContent>
       </Card>
 
+      {/* Foto Facial */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Foto Facial do Vigilante</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              onClick={() => setShowFaceCamera(true)}
+              className="flex items-center gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Capturar Foto Facial
+            </Button>
+            {formData.face_photo && (
+              <div className="text-green-600 text-sm">✓ Foto capturada</div>
+            )}
+          </div>
+          {formData.face_photo && (
+            <div className="mt-4">
+              <img 
+                src={formData.face_photo} 
+                alt="Foto facial" 
+                className="w-32 h-32 object-cover rounded-lg border"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Itens de Verificação */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Itens de Verificação da Motocicleta</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {[
+            { key: 'tires', label: 'Pneus' },
+            { key: 'brakes', label: 'Freios' },
+            { key: 'engine_oil', label: 'Óleo do Motor' },
+            { key: 'coolant', label: 'Líquido de Arrefecimento' },
+            { key: 'lights', label: 'Sistema de Iluminação' },
+            { key: 'electrical', label: 'Sistema Elétrico' },
+            { key: 'suspension', label: 'Suspensão' },
+            { key: 'cleaning', label: 'Limpeza' },
+            { key: 'leaks', label: 'Vazamentos' }
+          ].map((item) => (
+            <div key={item.key} className="space-y-3 p-4 border rounded-lg">
+              <h4 className="font-medium">{item.label}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`${item.key}_status`}>Status</Label>
+                  <Select 
+                    value={formData[`${item.key}_status` as keyof ChecklistFormData] as string} 
+                    onValueChange={(value) => setFormData({...formData, [`${item.key}_status`]: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="good">Bom</SelectItem>
+                      <SelectItem value="regular">Regular</SelectItem>
+                      <SelectItem value="needs_repair">Precisa Reparo</SelectItem>
+                      <SelectItem value="na">N/A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor={`${item.key}_observation`}>Observação</Label>
+                  <Textarea
+                    value={formData[`${item.key}_observation` as keyof ChecklistFormData] as string}
+                    onChange={(e) => setFormData({...formData, [`${item.key}_observation`]: e.target.value})}
+                    placeholder="Observações sobre este item..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Fotos da Motocicleta */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fotos da Motocicleta</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            onClick={() => setShowMotorcycleCamera(true)}
+            className="flex items-center gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Adicionar Foto da Motocicleta
+          </Button>
+          
+          {formData.motorcycle_photos.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formData.motorcycle_photos.map((photo, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={photo} 
+                    alt={`Motocicleta ${index + 1}`} 
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => removePhoto(index, 'motorcycle')}
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Combustível */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Combustível</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="fuel_level">Nível de Combustível (%)</Label>
+            <Input
+              type="number"
+              value={formData.fuel_level}
+              onChange={(e) => setFormData({...formData, fuel_level: parseInt(e.target.value) || 0})}
+              min="0"
+              max="100"
+              placeholder="Nível em porcentagem"
+            />
+          </div>
+          
+          <Button
+            type="button"
+            onClick={() => setShowFuelCamera(true)}
+            className="flex items-center gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Foto do Combustível
+          </Button>
+          
+          {formData.fuel_photos.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formData.fuel_photos.map((photo, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={photo} 
+                    alt={`Combustível ${index + 1}`} 
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => removePhoto(index, 'fuel')}
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quilometragem */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quilometragem</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="motorcycle_km">Quilometragem Atual</Label>
+            <Input
+              type="text"
+              value={formData.motorcycle_km}
+              onChange={(e) => setFormData({...formData, motorcycle_km: e.target.value})}
+              placeholder="Ex: 12.345 km"
+            />
+          </div>
+          
+          <Button
+            type="button"
+            onClick={() => setShowKmCamera(true)}
+            className="flex items-center gap-2"
+          >
+            <Camera className="h-4 w-4" />
+            Foto do Odômetro
+          </Button>
+          
+          {formData.km_photos.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formData.km_photos.map((photo, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={photo} 
+                    alt={`Odômetro ${index + 1}`} 
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => removePhoto(index, 'km')}
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Observações Gerais */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Observações Gerais e Danos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="general_observations">Observações Gerais</Label>
+            <Textarea
+              value={formData.general_observations}
+              onChange={(e) => setFormData({...formData, general_observations: e.target.value})}
+              placeholder="Observações gerais sobre a vistoria..."
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="damages">Danos ou Problemas Identificados</Label>
+            <Textarea
+              value={formData.damages}
+              onChange={(e) => setFormData({...formData, damages: e.target.value})}
+              placeholder="Descreva qualquer dano ou problema encontrado..."
+              rows={4}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Assinatura */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Assinatura do Vigilante</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            onClick={() => setShowSignature(true)}
+            className="flex items-center gap-2"
+          >
+            Adicionar Assinatura
+          </Button>
+          
+          {formData.signature && (
+            <div className="mt-4">
+              <img 
+                src={formData.signature} 
+                alt="Assinatura" 
+                className="w-64 h-32 object-contain border rounded-lg bg-white"
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Botões de Ação */}
       <div className="flex gap-4 pt-6">
         <Button 
           onClick={handleSave} 
@@ -586,6 +908,49 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
           Download PDF
         </Button>
       </div>
+
+      {/* Câmeras e Assinatura */}
+      {showFaceCamera && (
+        <CameraCapture
+          onCapture={(photo) => handlePhotoCapture(photo, 'face')}
+          onCancel={() => setShowFaceCamera(false)}
+          title="Capturar Foto Facial"
+        />
+      )}
+
+      {showMotorcycleCamera && (
+        <CameraCapture
+          onCapture={(photo) => handlePhotoCapture(photo, 'motorcycle')}
+          onCancel={() => setShowMotorcycleCamera(false)}
+          title="Capturar Foto da Motocicleta"
+        />
+      )}
+
+      {showFuelCamera && (
+        <CameraCapture
+          onCapture={(photo) => handlePhotoCapture(photo, 'fuel')}
+          onCancel={() => setShowFuelCamera(false)}
+          title="Capturar Foto do Combustível"
+        />
+      )}
+
+      {showKmCamera && (
+        <CameraCapture
+          onCapture={(photo) => handlePhotoCapture(photo, 'km')}
+          onCancel={() => setShowKmCamera(false)}
+          title="Capturar Foto do Odômetro"
+        />
+      )}
+
+      {showSignature && (
+        <SignatureCapture
+          onCapture={(signature) => {
+            setFormData({...formData, signature});
+            setShowSignature(false);
+          }}
+          onCancel={() => setShowSignature(false)}
+        />
+      )}
     </div>
   );
 };
