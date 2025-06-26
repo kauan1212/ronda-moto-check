@@ -28,15 +28,16 @@ export const useAuth = () => {
       }
 
       if (session?.user) {
-        // For all users, check their role from the database
+        // Check if user is admin by checking the profiles table
         try {
-          const { data: userRoles, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id);
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
           
           if (mounted) {
-            const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
+            const isAdmin = profile?.is_admin || false;
             
             setAuthState({
               user: session.user,
@@ -46,7 +47,7 @@ export const useAuth = () => {
             });
           }
         } catch (error) {
-          // If role fetch fails, set the user as authenticated but not admin
+          // If profile fetch fails, set the user as authenticated but not admin
           if (mounted) {
             setAuthState({
               user: session.user,
