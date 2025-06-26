@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,13 +111,6 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
-              alt="Grupo Celdan Facilities" 
-              className="h-12 w-12 rounded"
-            />
-          </div>
           <CardTitle className="text-2xl">Sistema de Vigilância</CardTitle>
           <CardDescription>
             Faça login ou crie sua conta para acessar o sistema

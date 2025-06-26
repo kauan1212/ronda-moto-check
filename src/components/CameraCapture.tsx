@@ -18,31 +18,41 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [showFileInput, setShowFileInput] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const startCamera = useCallback(async () => {
     try {
+      setError(null);
+      
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
 
-      // Primeiro tenta câmera com configurações específicas
+      // Configurações otimizadas para mobile
       const constraints = {
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 }
-        }
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          aspectRatio: { ideal: 16/9 }
+        },
+        audio: false
       };
+
+      console.log('Tentando acessar câmera com configurações:', constraints);
 
       let mediaStream;
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Câmera acessada com sucesso');
       } catch (error) {
         console.log('Tentativa específica falhou, tentando configuração básica:', error);
         // Fallback para configuração mais simples
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode }
+          video: { facingMode: facingMode },
+          audio: false
         });
+        console.log('Câmera acessada com configuração básica');
       }
 
       setStream(mediaStream);
@@ -51,11 +61,25 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
         videoRef.current.srcObject = mediaStream;
         videoRef.current.setAttribute('playsinline', 'true');
         videoRef.current.setAttribute('muted', 'true');
+        videoRef.current.setAttribute('autoplay', 'true');
+        
+        // Aguarda o vídeo estar pronto
+        await new Promise((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => {
+              console.log('Metadados do vídeo carregados');
+              resolve(true);
+            };
+          }
+        });
+        
         await videoRef.current.play();
+        console.log('Vídeo iniciado com sucesso');
+        setShowFileInput(false);
       }
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
-      // Se não conseguir acessar a câmera, mostra opção de arquivo
+      setError('Não foi possível acessar a câmera. Tente usar a opção de galeria.');
       setShowFileInput(true);
     }
   }, [facingMode, stream]);
@@ -68,52 +92,72 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
         const imageData = e.target?.result as string;
         setCapturedImage(imageData);
         setIsCapturing(true);
+        setError(null);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('Elementos de vídeo ou canvas não disponíveis');
+      return;
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    if (!context) return;
+    if (!context) {
+      console.error('Contexto do canvas não disponível');
+      return;
+    }
 
     // Define dimensões do canvas baseado no vídeo
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    const videoWidth = video.videoWidth || video.clientWidth || 640;
+    const videoHeight = video.videoHeight || video.clientHeight || 480;
+    
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    
+    console.log('Capturando foto com dimensões:', videoWidth, 'x', videoHeight);
     
     // Desenha a imagem do vídeo no canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    context.drawImage(video, 0, 0, videoWidth, videoHeight);
     
     // Converte para base64 com qualidade otimizada
     const imageData = canvas.toDataURL('image/jpeg', 0.85);
     
     setCapturedImage(imageData);
     setIsCapturing(true);
+    setError(null);
+    
+    console.log('Foto capturada com sucesso');
   };
 
   const confirmCapture = () => {
     if (capturedImage) {
+      console.log('Confirmando captura da foto');
       onCapture(capturedImage);
       cleanup();
     }
   };
 
   const retakePhoto = () => {
+    console.log('Refazendo foto');
     setCapturedImage(null);
     setIsCapturing(false);
     setShowFileInput(false);
+    setError(null);
   };
 
   const switchCamera = () => {
+    console.log('Trocando câmera');
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
   const cleanup = () => {
+    console.log('Limpando recursos da câmera');
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -121,6 +165,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
     setCapturedImage(null);
     setIsCapturing(false);
     setShowFileInput(false);
+    setError(null);
   };
 
   useEffect(() => {
@@ -147,7 +192,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
           <X className="h-6 w-6" />
         </Button>
         <h2 className="text-lg font-semibold">{title}</h2>
-        {!showFileInput && (
+        {!showFileInput && !error && (
           <Button
             variant="ghost"
             size="icon"
@@ -161,10 +206,13 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
 
       {/* Camera/Image view */}
       <div className="flex-1 relative overflow-hidden">
-        {showFileInput ? (
+        {error || showFileInput ? (
           <div className="flex flex-col items-center justify-center h-full text-white p-8">
+            {error && (
+              <p className="text-center mb-4 text-red-300">{error}</p>
+            )}
             <p className="text-center mb-4">
-              Não foi possível acessar a câmera. Selecione uma foto da galeria:
+              Selecione uma foto da galeria:
             </p>
             <input
               ref={fileInputRef}
@@ -176,10 +224,19 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
             />
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 mb-4"
             >
               Selecionar Foto
             </Button>
+            {!error && (
+              <Button
+                onClick={startCamera}
+                variant="outline"
+                className="text-white border-white hover:bg-white/20"
+              >
+                Tentar Câmera Novamente
+              </Button>
+            )}
           </div>
         ) : !isCapturing ? (
           <video
@@ -207,11 +264,12 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       <div className="p-6 bg-black/50">
         {!isCapturing ? (
           <div className="flex justify-center space-x-4">
-            {!showFileInput && (
+            {!showFileInput && !error && (
               <Button
                 size="lg"
                 onClick={capturePhoto}
                 className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black"
+                disabled={!stream}
               >
                 <Camera className="h-8 w-8" />
               </Button>
@@ -219,7 +277,8 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
             <Button
               variant="outline"
               onClick={() => {
-                setShowFileInput(!showFileInput);
+                setShowFileInput(true);
+                setError(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.click();
                 }

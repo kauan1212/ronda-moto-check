@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,22 +91,29 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
   const [showFuelCamera, setShowFuelCamera] = useState(false);
   const [showKmCamera, setShowKmCamera] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [vigilantesResult, motorcyclesResult] = await Promise.all([
-        supabase.from('vigilantes').select('*'),
-        supabase.from('motorcycles').select('*')
-      ]);
+      try {
+        const [vigilantesResult, motorcyclesResult] = await Promise.all([
+          supabase.from('vigilantes').select('*'),
+          supabase.from('motorcycles').select('*')
+        ]);
 
-      if (vigilantesResult.data) setVigilantes(vigilantesResult.data);
-      if (motorcyclesResult.data) setMotorcycles(motorcyclesResult.data);
+        if (vigilantesResult.data) setVigilantes(vigilantesResult.data);
+        if (motorcyclesResult.data) setMotorcycles(motorcyclesResult.data);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados');
+      }
     };
 
     fetchData();
   }, []);
 
   const handlePhotoCapture = (photo: string, type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
+    console.log('Foto capturada para:', type);
     switch (type) {
       case 'face':
         setFormData(prev => ({ ...prev, face_photo: photo }));
@@ -126,6 +132,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         setShowKmCamera(false);
         break;
     }
+    toast.success('Foto capturada com sucesso!');
   };
 
   const removePhoto = (index: number, type: 'motorcycle' | 'fuel' | 'km') => {
@@ -144,6 +151,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       }
       return newData;
     });
+    toast.success('Foto removida com sucesso!');
   };
 
   const handleSave = async () => {
@@ -156,6 +164,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       toast.error('Por favor, adicione sua assinatura');
       return;
     }
+
+    setIsSaving(true);
 
     try {
       const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
@@ -254,10 +264,14 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         fuel_level: 0
       });
       
-      onComplete();
+      // Não chama onComplete() aqui para evitar redirecionamento
+      // Em vez disso, apenas mostra uma mensagem de sucesso
+      
     } catch (error) {
       console.error('Erro inesperado:', error);
       toast.error('Erro inesperado ao salvar checklist');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -892,10 +906,10 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         <Button 
           onClick={handleSave} 
           className="flex-1 flex items-center gap-2"
-          disabled={!formData.vigilante_id || !formData.motorcycle_id || !formData.signature}
+          disabled={!formData.vigilante_id || !formData.motorcycle_id || !formData.signature || isSaving}
         >
           <Save className="h-4 w-4" />
-          Salvar Checklist
+          {isSaving ? 'Salvando...' : 'Salvar Checklist'}
         </Button>
         
         <Button 
