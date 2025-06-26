@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, Copy } from 'lucide-react';
+import { ArrowLeft, Users, Copy, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,8 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, onBack }: LayoutProps) => {
+  const { signOut } = useAuth();
+
   const copyVigilanteLink = () => {
     const vigilanteUrl = `${window.location.origin}/vigilante-checklist`;
     navigator.clipboard.writeText(vigilanteUrl).then(() => {
@@ -18,6 +21,15 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
     }).catch(() => {
       toast.error('Erro ao copiar link');
     });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      toast.error('Erro ao fazer logout');
+    }
   };
 
   return (
@@ -68,6 +80,15 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Área do Vigilante</span>
                 <span className="sm:hidden">Vigilante</span>
+              </Button>
+              <Button 
+                onClick={handleLogout}
+                variant="outline"
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>

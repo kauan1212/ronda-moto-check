@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, Bike, CheckSquare } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Bike, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
 import { toast } from 'sonner';
+import Layout from './Layout';
 import VigilanteManagement from './VigilanteManagement';
 import MotorcycleManagement from './MotorcycleManagement';
 
@@ -25,56 +26,50 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
       console.log('Fetching data for condominium:', selectedCondominium.id);
       setLoading(true);
 
-      // Fetch vigilantes with simplified query (without RLS restrictions)
+      // Fetch vigilantes
       console.log('Fetching vigilantes...');
       const { data: vigilantesData, error: vigilantesError } = await supabase
         .from('vigilantes')
-        .select('*');
+        .select('*')
+        .eq('condominium_id', selectedCondominium.id);
 
       if (vigilantesError) {
         console.error('Error fetching vigilantes:', vigilantesError);
-        // Don't show error toast, just log it
+        toast.error('Erro ao carregar vigilantes: ' + vigilantesError.message);
       } else {
-        console.log('All vigilantes fetched:', vigilantesData);
-        // Filter by condominium on the client side
-        const filteredVigilantes = vigilantesData?.filter(v => v.condominium_id === selectedCondominium.id) || [];
-        console.log('Filtered vigilantes for condominium:', filteredVigilantes);
-        setVigilantes(filteredVigilantes);
+        console.log('Vigilantes fetched:', vigilantesData);
+        setVigilantes(vigilantesData || []);
       }
 
-      // Fetch motorcycles with simplified query (without RLS restrictions)
+      // Fetch motorcycles
       console.log('Fetching motorcycles...');
       const { data: motorcyclesData, error: motorcyclesError } = await supabase
         .from('motorcycles')
-        .select('*');
+        .select('*')
+        .eq('condominium_id', selectedCondominium.id);
 
       if (motorcyclesError) {
         console.error('Error fetching motorcycles:', motorcyclesError);
-        // Don't show error toast, just log it
+        toast.error('Erro ao carregar motocicletas: ' + motorcyclesError.message);
       } else {
-        console.log('All motorcycles fetched:', motorcyclesData);
-        // Filter by condominium on the client side
-        const filteredMotorcycles = motorcyclesData?.filter(m => m.condominium_id === selectedCondominium.id) || [];
-        console.log('Filtered motorcycles for condominium:', filteredMotorcycles);
-        setMotorcycles(filteredMotorcycles);
+        console.log('Motorcycles fetched:', motorcyclesData);
+        setMotorcycles(motorcyclesData || []);
       }
 
-      // Fetch checklists with simplified query (without RLS restrictions)
+      // Fetch checklists
       console.log('Fetching checklists...');
       const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
         .select('*')
+        .eq('condominium_id', selectedCondominium.id)
         .order('created_at', { ascending: false });
 
       if (checklistsError) {
         console.error('Error fetching checklists:', checklistsError);
-        // Don't show error toast, just log it
+        toast.error('Erro ao carregar checklists: ' + checklistsError.message);
       } else {
-        console.log('All checklists fetched:', checklistsData);
-        // Filter by condominium on the client side
-        const filteredChecklists = checklistsData?.filter(c => c.condominium_id === selectedCondominium.id) || [];
-        console.log('Filtered checklists for condominium:', filteredChecklists);
-        setChecklists(filteredChecklists);
+        console.log('Checklists fetched:', checklistsData);
+        setChecklists(checklistsData || []);
       }
 
     } catch (error: any) {
@@ -97,7 +92,8 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'vigilantes'
+            table: 'vigilantes',
+            filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           (payload) => {
             console.log('Vigilantes real-time change:', payload);
@@ -113,7 +109,8 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'motorcycles'
+            table: 'motorcycles',
+            filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           (payload) => {
             console.log('Motorcycles real-time change:', payload);
@@ -129,7 +126,8 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           {
             event: '*',
             schema: 'public',
-            table: 'checklists'
+            table: 'checklists',
+            filter: `condominium_id=eq.${selectedCondominium.id}`
           },
           (payload) => {
             console.log('Checklists real-time change:', payload);
@@ -149,84 +147,90 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <Layout title={selectedCondominium.name} onBack={onBack}>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Carregando dados...</div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{selectedCondominium.name}</h1>
-          <p className="text-gray-600">Painel de Controle</p>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Vigilantes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{vigilantes.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {vigilantes.filter(v => v.status === 'active').length} ativos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Motocicletas</CardTitle>
-            <Bike className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{motorcycles.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {motorcycles.filter(m => m.status === 'available').length} disponíveis
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Checklists Realizados</CardTitle>
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{checklists.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Este mês
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Management Components */}
+    <Layout title={selectedCondominium.name} onBack={onBack}>
       <div className="space-y-6">
-        <VigilanteManagement 
-          condominium={selectedCondominium} 
-          vigilantes={vigilantes}
-          onUpdate={fetchData}
-        />
-        
-        <MotorcycleManagement 
-          condominium={selectedCondominium} 
-          motorcycles={motorcycles}
-          onUpdate={fetchData}
-        />
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Vigilantes</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{vigilantes.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {vigilantes.filter(v => v.status === 'active').length} ativos
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Motocicletas</CardTitle>
+              <Bike className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{motorcycles.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {motorcycles.filter(m => m.status === 'available').length} disponíveis
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Checklists Realizados</CardTitle>
+              <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{checklists.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Este mês
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Management Tabs */}
+        <Tabs defaultValue="vigilantes" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="vigilantes" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Vigilantes
+            </TabsTrigger>
+            <TabsTrigger value="motorcycles" className="flex items-center gap-2">
+              <Bike className="h-4 w-4" />
+              Motocicletas
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="vigilantes" className="mt-6">
+            <VigilanteManagement 
+              condominium={selectedCondominium} 
+              vigilantes={vigilantes}
+              onUpdate={fetchData}
+            />
+          </TabsContent>
+          
+          <TabsContent value="motorcycles" className="mt-6">
+            <MotorcycleManagement 
+              condominium={selectedCondominium} 
+              motorcycles={motorcycles}
+              onUpdate={fetchData}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </Layout>
   );
 };
 
