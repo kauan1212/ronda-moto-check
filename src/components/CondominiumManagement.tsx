@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,14 +45,11 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }
   });
 
-  useEffect(() => {
-    fetchCondominiums();
-  }, []);
-
   const fetchCondominiums = async () => {
     try {
       if (!user) {
         console.log('No user found, skipping fetch');
+        setCondominiums([]);
         setLoading(false);
         return;
       }
@@ -61,7 +59,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
-        .eq('user_id', user.id) // Garantir filtro explícito por user_id
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) {
@@ -79,6 +77,18 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       setLoading(false);
     }
   };
+
+  // Carregar condomínios quando o usuário mudar ou ao montar o componente
+  useEffect(() => {
+    if (user) {
+      console.log('User changed, fetching condominiums for:', user.id);
+      fetchCondominiums();
+    } else {
+      console.log('No user, clearing condominiums');
+      setCondominiums([]);
+      setLoading(false);
+    }
+  }, [user?.id]); // Dependência específica no user.id
 
   const onSubmit = async (values: CondominiumForm) => {
     try {

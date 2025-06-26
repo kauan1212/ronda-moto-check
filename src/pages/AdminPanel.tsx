@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
@@ -40,7 +41,9 @@ const AdminPanel = () => {
       console.log('Fetched condominiums:', data?.length);
       return data as Condominium[];
     },
-    enabled: !!user
+    enabled: !!user?.id, // Mudança importante: dependência mais específica
+    staleTime: 0, // Garante que os dados sejam sempre atualizados
+    refetchOnMount: true // Garante refetch ao montar o componente
   });
 
   const { data: vigilantes = [], refetch: refetchVigilantes } = useQuery({
