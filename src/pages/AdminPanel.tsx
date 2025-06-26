@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Bike, CheckSquare, Image } from 'lucide-react';
@@ -106,7 +107,7 @@ const AdminPanel = () => {
       />
 
       <Tabs defaultValue="condominiums" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="condominiums" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Condomínios

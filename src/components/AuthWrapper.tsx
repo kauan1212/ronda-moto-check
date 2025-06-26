@@ -30,10 +30,7 @@ const AuthWrapper = () => {
   console.log('User authenticated, showing dashboard for:', { email: user.email, isAdmin });
 
   if (isAdmin) {
-    return <AdminPanel onLogout={() => {
-      console.log('Logout triggered');
-      window.location.reload();
-    }} />;
+    return <AdminPanel />;
   }
 
   return <AdminDashboard />;
