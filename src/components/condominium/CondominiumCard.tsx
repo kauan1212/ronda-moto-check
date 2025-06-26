@@ -1,0 +1,74 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Building2, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
+import { Condominium } from '@/types';
+
+interface CondominiumCardProps {
+  condominium: Condominium;
+  onEdit: (condominium: Condominium) => void;
+  onDelete: (condominium: Condominium) => void;
+  onSelect: (condominium: Condominium) => void;
+}
+
+const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect }: CondominiumCardProps) => {
+  return (
+    <Card className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+          <div className="flex items-center min-w-0 flex-1">
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+            <span className="truncate">{condominium.name}</span>
+          </div>
+          <div className="flex gap-1 flex-shrink-0 ml-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onEdit(condominium)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onDelete(condominium)}
+              className="h-8 w-8 p-0"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-0">
+        {condominium.address && (
+          <div className="flex items-start text-xs sm:text-sm text-slate-600">
+            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 mt-0.5 text-slate-400 flex-shrink-0" />
+            <span className="break-words">{condominium.address}</span>
+          </div>
+        )}
+        {condominium.phone && (
+          <div className="flex items-center text-xs sm:text-sm text-slate-600">
+            <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-slate-400 flex-shrink-0" />
+            <span className="break-words">{condominium.phone}</span>
+          </div>
+        )}
+        {condominium.email && (
+          <div className="flex items-center text-xs sm:text-sm text-slate-600">
+            <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-slate-400 flex-shrink-0" />
+            <span className="break-words">{condominium.email}</span>
+          </div>
+        )}
+        <Button 
+          onClick={() => onSelect(condominium)}
+          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
+        >
+          Acessar Painel
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default CondominiumCard;
