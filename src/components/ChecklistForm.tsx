@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle, Minus } from 'lucide-react';
+import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle, Minus, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Motorcycle, Condominium } from '@/types';
 import { toast } from 'sonner';
@@ -161,6 +161,93 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
     toast.success('Assinatura capturada com sucesso!');
   };
 
+  const generatePDF = () => {
+    const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
+    const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
+    const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
+
+    if (!selectedVigilante || !selectedMotorcycle || !selectedCondominium) {
+      toast.error('Preencha todos os campos obrigatórios antes de gerar o PDF');
+      return;
+    }
+
+    // Criar conteúdo HTML para o PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Checklist de Vistoria</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .section { margin-bottom: 20px; }
+          .item { margin-bottom: 10px; }
+          .status { font-weight: bold; }
+          .good { color: green; }
+          .regular { color: orange; }
+          .needs_repair { color: red; }
+          .photo { max-width: 200px; margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Checklist de Vistoria</h1>
+          <h2>${selectedCondominium.name}</h2>
+          <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+        </div>
+        
+        <div class="section">
+          <h3>Identificação</h3>
+          <p><strong>Vigilante:</strong> ${selectedVigilante.name} (${selectedVigilante.registration})</p>
+          <p><strong>Motocicleta:</strong> ${selectedMotorcycle.brand} ${selectedMotorcycle.model} - ${selectedMotorcycle.plate}</p>
+          <p><strong>Tipo:</strong> ${formData.type === 'start' ? 'Início do Turno' : 'Fim do Turno'}</p>
+          <p><strong>Quilometragem:</strong> ${formData.motorcycle_km}</p>
+        </div>
+
+        <div class="section">
+          <h3>Verificações</h3>
+          ${['tires', 'brakes', 'engine_oil', 'coolant', 'lights', 'electrical', 'suspension', 'cleaning', 'leaks'].map(item => {
+            const status = formData[`${item}_status` as keyof typeof formData] as string;
+            const observation = formData[`${item}_observation` as keyof typeof formData] as string;
+            const labels: { [key: string]: string } = {
+              tires: 'Pneus', brakes: 'Freios', engine_oil: 'Óleo do Motor',
+              coolant: 'Líquido de Arrefecimento', lights: 'Luzes', electrical: 'Sistema Elétrico',
+              suspension: 'Suspensão', cleaning: 'Limpeza', leaks: 'Vazamentos'
+            };
+            return `
+              <div class="item">
+                <strong>${labels[item]}:</strong> 
+                <span class="status ${status}">${status === 'good' ? 'Bom' : status === 'regular' ? 'Regular' : status === 'needs_repair' ? 'Precisa Reparo' : 'N/A'}</span>
+                ${observation ? `<br><em>Obs: ${observation}</em>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="section">
+          <h3>Observações</h3>
+          <p><strong>Observações Gerais:</strong> ${formData.general_observations || 'Nenhuma'}</p>
+          <p><strong>Danos ou Problemas:</strong> ${formData.damages || 'Nenhum'}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Criar blob e fazer download
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `checklist-${selectedMotorcycle.plate}-${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success('PDF gerado com sucesso!');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -188,21 +275,56 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
       ].filter(photo => photo !== '');
 
       const checklistData = {
-        ...formData,
         condominium_id: selectedCondominiumId,
+        vigilante_id: formData.vigilante_id,
         vigilante_name: selectedVigilante.name,
+        motorcycle_id: formData.motorcycle_id,
         motorcycle_plate: selectedMotorcycle.plate,
+        type: formData.type,
+        face_photo: formData.face_photo || null,
+        tires_status: formData.tires_status || null,
+        tires_observation: formData.tires_observation || null,
+        brakes_status: formData.brakes_status || null,
+        brakes_observation: formData.brakes_observation || null,
+        engine_oil_status: formData.engine_oil_status || null,
+        engine_oil_observation: formData.engine_oil_observation || null,
+        coolant_status: formData.coolant_status || null,
+        coolant_observation: formData.coolant_observation || null,
+        lights_status: formData.lights_status || null,
+        lights_observation: formData.lights_observation || null,
+        electrical_status: formData.electrical_status || null,
+        electrical_observation: formData.electrical_observation || null,
+        suspension_status: formData.suspension_status || null,
+        suspension_observation: formData.suspension_observation || null,
+        cleaning_status: formData.cleaning_status || null,
+        cleaning_observation: formData.cleaning_observation || null,
+        leaks_status: formData.leaks_status || null,
+        leaks_observation: formData.leaks_observation || null,
         motorcycle_photos,
+        fuel_level: 0, // Mantido para compatibilidade
+        fuel_photos: formData.fuel_photos,
+        motorcycle_km: formData.motorcycle_km || null,
+        km_photos: formData.km_photos,
+        general_observations: formData.general_observations || null,
+        damages: formData.damages || null,
+        signature: formData.signature || null,
         status: 'completed',
         completed_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      console.log('Dados do checklist para salvar:', checklistData);
+
+      const { data, error } = await supabase
         .from('checklists')
-        .insert([checklistData]);
+        .insert([checklistData])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro detalhado do Supabase:', error);
+        throw error;
+      }
 
+      console.log('Checklist salvo com sucesso:', data);
       toast.success('Checklist salvo com sucesso!');
       
       // Reset form
@@ -233,7 +355,6 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         photo_back: '',
         photo_left: '',
         photo_right: '',
-        fuel_level: 0,
         fuel_photos: [],
         motorcycle_km: '',
         km_photos: [],
@@ -242,9 +363,15 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         signature: ''
       });
       setSelectedCondominiumId('');
-    } catch (error) {
+      
+      // Voltar para o dashboard após salvar
+      setTimeout(() => {
+        onBack();
+      }, 1500);
+      
+    } catch (error: any) {
       console.error('Erro ao salvar checklist:', error);
-      toast.error('Erro ao salvar checklist');
+      toast.error(`Erro ao salvar checklist: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -596,42 +723,29 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
                   </div>
                 </div>
 
-                {/* Combustível */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="fuel_level">Nível de Combustível (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.fuel_level}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fuel_level: parseInt(e.target.value) || 0 }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Foto do Combustível</Label>
-                    <div className="flex gap-3 mt-1">
-                      <Button
-                        type="button"
-                        onClick={() => openCamera('fuel')}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Foto
-                      </Button>
-                      {formData.fuel_photos.length > 0 && (
-                        <div className="w-12 h-12 border rounded overflow-hidden">
-                          <img 
-                            src={formData.fuel_photos[0]} 
-                            alt="Combustível" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
+                {/* Combustível - Apenas Foto */}
+                <div>
+                  <Label className="text-base font-medium">Combustível</Label>
+                  <div className="flex gap-3 mt-2">
+                    <Button
+                      type="button"
+                      onClick={() => openCamera('fuel')}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Foto do Combustível
+                    </Button>
+                    {formData.fuel_photos.length > 0 && (
+                      <div className="w-12 h-12 border rounded overflow-hidden">
+                        <img 
+                          src={formData.fuel_photos[0]} 
+                          alt="Combustível" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -727,17 +841,30 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
               </CardContent>
             </Card>
 
-            {/* Botão de Salvar */}
+            {/* Botões de Ação */}
             <Card>
               <CardContent className="pt-6">
-                <Button 
-                  type="submit" 
-                  className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
-                  disabled={loading}
-                >
-                  <Save className="h-5 w-5 mr-2" />
-                  {loading ? 'Salvando...' : 'Salvar Checklist'}
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Button 
+                    type="button"
+                    onClick={generatePDF}
+                    variant="outline"
+                    className="text-lg py-6"
+                    disabled={loading || !selectedCondominiumId || !formData.vigilante_id || !formData.motorcycle_id}
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Download PDF
+                  </Button>
+                  
+                  <Button 
+                    type="submit" 
+                    className="bg-green-600 hover:bg-green-700 text-lg py-6"
+                    disabled={loading}
+                  >
+                    <Save className="h-5 w-5 mr-2" />
+                    {loading ? 'Salvando...' : 'Salvar Checklist'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </>
