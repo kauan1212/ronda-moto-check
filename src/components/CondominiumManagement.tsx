@@ -50,7 +50,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   const fetchCondominiums = async () => {
     try {
-      console.log('Fetching condominiums...');
+      console.log('Fetching condominiums for current user...');
       
       const { data, error } = await supabase
         .from('condominiums')
@@ -80,13 +80,15 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
         return;
       }
 
-      // Sanitize input data and add user_id
+      console.log('Saving condominium with user_id:', user.id);
+
+      // Sanitize input data and ensure user_id is set
       const condominiumData = {
         name: values.name.trim(),
         address: values.address?.trim() || null,
         phone: values.phone?.trim() || null,
         email: values.email?.trim() || null,
-        user_id: user.id, // Add the current user's ID
+        user_id: user.id, // Sempre definir o user_id como o usuário atual
       };
 
       if (editingCondominium) {
