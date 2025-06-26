@@ -160,6 +160,7 @@ export type Database = {
           name: string
           phone: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           address?: string | null
@@ -169,6 +170,7 @@ export type Database = {
           name: string
           phone?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           address?: string | null
@@ -178,6 +180,7 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -322,7 +325,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
