@@ -1,32 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, Save, User, Bike, CheckCircle, AlertTriangle, XCircle, Minus, Download } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Vigilante, Motorcycle, Condominium } from '@/types';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Vigilante, Motorcycle } from '@/types';
 import CameraCapture from './CameraCapture';
 import SignatureCapture from './SignatureCapture';
-import Layout from './Layout';
+import { Camera, Download, Save, User, Bike, Calendar, Clock } from 'lucide-react';
 
-interface ChecklistFormProps {
-  onBack: () => void;
+interface ChecklistFormData {
+  vigilante_id: string;
+  motorcycle_id: string;
+  type: 'start' | 'end';
+  face_photo: string;
+  tires_status: string;
+  tires_observation: string;
+  brakes_status: string;
+  brakes_observation: string;
+  engine_oil_status: string;
+  engine_oil_observation: string;
+  coolant_status: string;
+  coolant_observation: string;
+  lights_status: string;
+  lights_observation: string;
+  electrical_status: string;
+  electrical_observation: string;
+  suspension_status: string;
+  suspension_observation: string;
+  cleaning_status: string;
+  cleaning_observation: string;
+  leaks_status: string;
+  leaks_observation: string;
+  motorcycle_photos: string[];
+  fuel_photos: string[];
+  motorcycle_km: string;
+  km_photos: string[];
+  general_observations: string;
+  damages: string;
+  signature: string;
+  fuel_level: number;
 }
 
-const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
-  const [condominiums, setCondominiums] = useState<Condominium[]>([]);
-  const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
-  const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
-  const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
-  const [formData, setFormData] = useState({
+interface ChecklistFormProps {
+  onComplete: () => void;
+}
+
+const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
+  const [formData, setFormData] = useState<ChecklistFormData>({
     vigilante_id: '',
     motorcycle_id: '',
-    type: 'start' as 'start' | 'end',
+    type: 'start',
     face_photo: '',
     tires_status: '',
     tires_observation: '',
@@ -46,218 +74,45 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
     cleaning_observation: '',
     leaks_status: '',
     leaks_observation: '',
-    // Fotos específicas da motocicleta
-    photo_front: '',
-    photo_back: '',
-    photo_left: '',
-    photo_right: '',
-    fuel_level: 0,
-    fuel_photos: [] as string[],
+    motorcycle_photos: [],
+    fuel_photos: [],
     motorcycle_km: '',
-    km_photos: [] as string[],
+    km_photos: [],
     general_observations: '',
     damages: '',
-    signature: ''
+    signature: '',
+    fuel_level: 0
   });
 
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraType, setCameraType] = useState<'face' | 'front' | 'back' | 'left' | 'right' | 'fuel' | 'km'>('face');
-  const [showSignature, setShowSignature] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
+  const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
 
   useEffect(() => {
-    fetchCondominiums();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCondominiumId) {
-      fetchVigilantesAndMotorcycles();
-    }
-  }, [selectedCondominiumId]);
-
-  const fetchCondominiums = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('condominiums')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCondominiums(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar condomínios:', error);
-      toast.error('Erro ao carregar condomínios');
-    }
-  };
-
-  const fetchVigilantesAndMotorcycles = async () => {
-    try {
-      const [vigilantesResponse, motorcyclesResponse] = await Promise.all([
-        supabase
-          .from('vigilantes')
-          .select('*')
-          .eq('condominium_id', selectedCondominiumId)
-          .eq('status', 'active'),
-        supabase
-          .from('motorcycles')
-          .select('*')
-          .eq('condominium_id', selectedCondominiumId)
-          .eq('status', 'available')
+    const fetchData = async () => {
+      const [vigilantesResult, motorcyclesResult] = await Promise.all([
+        supabase.from('vigilantes').select('*'),
+        supabase.from('motorcycles').select('*')
       ]);
 
-      if (vigilantesResponse.error) throw vigilantesResponse.error;
-      if (motorcyclesResponse.error) throw motorcyclesResponse.error;
+      if (vigilantesResult.data) setVigilantes(vigilantesResult.data);
+      if (motorcyclesResult.data) setMotorcycles(motorcyclesResult.data);
+    };
 
-      setVigilantes(vigilantesResponse.data || []);
-      setMotorcycles(motorcyclesResponse.data || []);
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-      toast.error('Erro ao carregar vigilantes e motocicletas');
-    }
-  };
+    fetchData();
+  }, []);
 
-  const openCamera = (type: 'face' | 'front' | 'back' | 'left' | 'right' | 'fuel' | 'km') => {
-    setCameraType(type);
-    setShowCamera(true);
-  };
-
-  const handlePhotoCapture = (imageData: string) => {
-    switch (cameraType) {
-      case 'face':
-        setFormData(prev => ({ ...prev, face_photo: imageData }));
-        break;
-      case 'front':
-        setFormData(prev => ({ ...prev, photo_front: imageData }));
-        break;
-      case 'back':
-        setFormData(prev => ({ ...prev, photo_back: imageData }));
-        break;
-      case 'left':
-        setFormData(prev => ({ ...prev, photo_left: imageData }));
-        break;
-      case 'right':
-        setFormData(prev => ({ ...prev, photo_right: imageData }));
-        break;
-      case 'fuel':
-        setFormData(prev => ({ 
-          ...prev, 
-          fuel_photos: [...prev.fuel_photos, imageData] 
-        }));
-        break;
-      case 'km':
-        setFormData(prev => ({ 
-          ...prev, 
-          km_photos: [...prev.km_photos, imageData] 
-        }));
-        break;
-    }
-    setShowCamera(false);
-    toast.success('Foto capturada com sucesso!');
-  };
-
-  const handleSignatureCapture = (signatureData: string) => {
-    setFormData(prev => ({ ...prev, signature: signatureData }));
-    setShowSignature(false);
-    toast.success('Assinatura capturada com sucesso!');
-  };
-
-  const generatePDF = () => {
-    const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
-    const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
-    const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
-
-    if (!selectedVigilante || !selectedMotorcycle || !selectedCondominium) {
-      toast.error('Preencha todos os campos obrigatórios antes de gerar o PDF');
+  const handleSave = async () => {
+    if (!formData.vigilante_id || !formData.motorcycle_id) {
+      toast.error('Por favor, selecione um vigilante e uma motocicleta');
       return;
     }
 
-    // Criar conteúdo HTML para o PDF
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Checklist de Vistoria</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .section { margin-bottom: 20px; }
-          .item { margin-bottom: 10px; }
-          .status { font-weight: bold; }
-          .good { color: green; }
-          .regular { color: orange; }
-          .needs_repair { color: red; }
-          .photo { max-width: 200px; margin: 10px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Checklist de Vistoria</h1>
-          <h2>${selectedCondominium.name}</h2>
-          <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
-        </div>
-        
-        <div class="section">
-          <h3>Identificação</h3>
-          <p><strong>Vigilante:</strong> ${selectedVigilante.name} (${selectedVigilante.registration})</p>
-          <p><strong>Motocicleta:</strong> ${selectedMotorcycle.brand} ${selectedMotorcycle.model} - ${selectedMotorcycle.plate}</p>
-          <p><strong>Tipo:</strong> ${formData.type === 'start' ? 'Início do Turno' : 'Fim do Turno'}</p>
-          <p><strong>Quilometragem:</strong> ${formData.motorcycle_km}</p>
-        </div>
-
-        <div class="section">
-          <h3>Verificações</h3>
-          ${['tires', 'brakes', 'engine_oil', 'coolant', 'lights', 'electrical', 'suspension', 'cleaning', 'leaks'].map(item => {
-            const status = formData[`${item}_status` as keyof typeof formData] as string;
-            const observation = formData[`${item}_observation` as keyof typeof formData] as string;
-            const labels: { [key: string]: string } = {
-              tires: 'Pneus', brakes: 'Freios', engine_oil: 'Óleo do Motor',
-              coolant: 'Líquido de Arrefecimento', lights: 'Luzes', electrical: 'Sistema Elétrico',
-              suspension: 'Suspensão', cleaning: 'Limpeza', leaks: 'Vazamentos'
-            };
-            return `
-              <div class="item">
-                <strong>${labels[item]}:</strong> 
-                <span class="status ${status}">${status === 'good' ? 'Bom' : status === 'regular' ? 'Regular' : status === 'needs_repair' ? 'Precisa Reparo' : 'N/A'}</span>
-                ${observation ? `<br><em>Obs: ${observation}</em>` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-
-        <div class="section">
-          <h3>Observações</h3>
-          <p><strong>Observações Gerais:</strong> ${formData.general_observations || 'Nenhuma'}</p>
-          <p><strong>Danos ou Problemas:</strong> ${formData.damages || 'Nenhum'}</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Criar blob e fazer download
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `checklist-${selectedMotorcycle.plate}-${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('PDF gerado com sucesso!');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    if (!formData.signature) {
+      toast.error('Por favor, adicione sua assinatura');
+      return;
+    }
 
     try {
-      if (!selectedCondominiumId || !formData.vigilante_id || !formData.motorcycle_id) {
-        toast.error('Preencha todos os campos obrigatórios');
-        return;
-      }
-
       const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
       const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
 
@@ -266,19 +121,10 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         return;
       }
 
-      // Criar array de fotos da motocicleta com as novas fotos específicas
-      const motorcycle_photos = [
-        formData.photo_front,
-        formData.photo_back,
-        formData.photo_left,
-        formData.photo_right
-      ].filter(photo => photo !== '');
-
       const checklistData = {
-        condominium_id: selectedCondominiumId,
         vigilante_id: formData.vigilante_id,
-        vigilante_name: selectedVigilante.name,
         motorcycle_id: formData.motorcycle_id,
+        vigilante_name: selectedVigilante.name,
         motorcycle_plate: selectedMotorcycle.plate,
         type: formData.type,
         face_photo: formData.face_photo || null,
@@ -300,34 +146,34 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         cleaning_observation: formData.cleaning_observation || null,
         leaks_status: formData.leaks_status || null,
         leaks_observation: formData.leaks_observation || null,
-        motorcycle_photos,
-        fuel_level: 0, // Mantido para compatibilidade
+        motorcycle_photos: formData.motorcycle_photos,
         fuel_photos: formData.fuel_photos,
         motorcycle_km: formData.motorcycle_km || null,
         km_photos: formData.km_photos,
         general_observations: formData.general_observations || null,
         damages: formData.damages || null,
-        signature: formData.signature || null,
+        signature: formData.signature,
         status: 'completed',
-        completed_at: new Date().toISOString()
+        condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id
       };
 
-      console.log('Dados do checklist para salvar:', checklistData);
+      console.log('Salvando checklist com dados:', checklistData);
 
       const { data, error } = await supabase
         .from('checklists')
         .insert([checklistData])
-        .select();
+        .select()
+        .single();
 
       if (error) {
-        console.error('Erro detalhado do Supabase:', error);
-        throw error;
+        console.error('Erro ao salvar checklist:', error);
+        toast.error(`Erro ao salvar checklist: ${error.message}`);
+        return;
       }
 
       console.log('Checklist salvo com sucesso:', data);
       toast.success('Checklist salvo com sucesso!');
       
-      // Reset form - CORREÇÃO: Adicionada propriedade fuel_level que estava faltando
       setFormData({
         vigilante_id: '',
         motorcycle_id: '',
@@ -351,449 +197,396 @@ const ChecklistForm = ({ onBack }: ChecklistFormProps) => {
         cleaning_observation: '',
         leaks_status: '',
         leaks_observation: '',
-        photo_front: '',
-        photo_back: '',
-        photo_left: '',
-        photo_right: '',
-        fuel_level: 0, // CORREÇÃO: Propriedade que estava faltando
+        motorcycle_photos: [],
         fuel_photos: [],
         motorcycle_km: '',
         km_photos: [],
         general_observations: '',
         damages: '',
-        signature: ''
+        signature: '',
+        fuel_level: 0
       });
-      setSelectedCondominiumId('');
       
-      // Voltar para o dashboard após salvar
-      setTimeout(() => {
-        onBack();
-      }, 1500);
-      
-    } catch (error: any) {
-      console.error('Erro ao salvar checklist:', error);
-      toast.error(`Erro ao salvar checklist: ${error.message || 'Erro desconhecido'}`);
-    } finally {
-      setLoading(false);
+      onComplete();
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      toast.error('Erro inesperado ao salvar checklist');
     }
   };
 
-  const StatusIcon = ({ status }: { status: string }) => {
-    switch (status) {
-      case 'good':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'regular':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      case 'needs_repair':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'na':
-        return <Minus className="h-4 w-4 text-gray-600" />;
-      default:
-        return null;
+  const generatePDF = () => {
+    const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
+    const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
+    const currentDate = new Date();
+    const dateStr = currentDate.toLocaleDateString('pt-BR');
+    const timeStr = currentDate.toLocaleTimeString('pt-BR');
+
+    if (!selectedVigilante || !selectedMotorcycle) {
+      toast.error('Selecione um vigilante e uma motocicleta primeiro');
+      return;
     }
+
+    const getStatusLabel = (status: string) => {
+      switch (status) {
+        case 'good': return 'Bom';
+        case 'regular': return 'Regular';
+        case 'needs_repair': return 'Precisa Reparo';
+        case 'na': return 'N/A';
+        default: return 'Não verificado';
+      }
+    };
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Checklist de Vistoria - ${selectedMotorcycle.plate}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+            line-height: 1.6;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            color: #2563eb;
+            margin-bottom: 10px;
+            font-size: 28px;
+          }
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+          }
+          .info-card {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+          }
+          .info-card h3 {
+            color: #1e40af;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 5px;
+          }
+          .inspection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+          }
+          .inspection-item {
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+          }
+          .inspection-item h4 {
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+          }
+          .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .status.good { background-color: #dcfce7; color: #166534; }
+          .status.regular { background-color: #fef3c7; color: #92400e; }
+          .status.needs_repair { background-color: #fee2e2; color: #991b1b; }
+          .status.na { background-color: #f3f4f6; color: #6b7280; }
+          .observation {
+            background-color: #f9fafb;
+            padding: 10px;
+            border-radius: 4px;
+            font-style: italic;
+            color: #6b7280;
+          }
+          .photos-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+          }
+          .signature-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+          }
+          .signature-img {
+            max-width: 300px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          .datetime-info {
+            background-color: #eff6ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2563eb;
+          }
+          .datetime-info strong {
+            color: #1e40af;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>RELATÓRIO DE VISTORIA DE MOTOCICLETA</h1>
+          <div class="datetime-info">
+            <strong>Data:</strong> ${dateStr} | <strong>Horário:</strong> ${timeStr}
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <h3>📋 Informações da Vistoria</h3>
+            <p><strong>Tipo:</strong> ${formData.type === 'start' ? 'Início de Turno' : 'Fim de Turno'}</p>
+            <p><strong>Status:</strong> Concluída</p>
+            <p><strong>Quilometragem:</strong> ${formData.motorcycle_km || 'Não informado'}</p>
+          </div>
+          
+          <div class="info-card">
+            <h3>👮 Vigilante Responsável</h3>
+            <p><strong>Nome:</strong> ${selectedVigilante.name}</p>
+            <p><strong>Email:</strong> ${selectedVigilante.email}</p>
+            <p><strong>Matrícula:</strong> ${selectedVigilante.registration}</p>
+          </div>
+          
+          <div class="info-card">
+            <h3>🏍️ Dados da Motocicleta</h3>
+            <p><strong>Placa:</strong> ${selectedMotorcycle.plate}</p>
+            <p><strong>Marca/Modelo:</strong> ${selectedMotorcycle.brand} ${selectedMotorcycle.model}</p>
+            <p><strong>Ano:</strong> ${selectedMotorcycle.year}</p>
+            <p><strong>Cor:</strong> ${selectedMotorcycle.color}</p>
+          </div>
+        </div>
+
+        <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">🔍 ITENS VERIFICADOS</h2>
+        
+        <div class="inspection-grid">
+          <div class="inspection-item">
+            <h4>🛞 Pneus</h4>
+            <div class="status ${formData.tires_status}">${getStatusLabel(formData.tires_status)}</div>
+            ${formData.tires_observation ? `<div class="observation">${formData.tires_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>🛑 Freios</h4>
+            <div class="status ${formData.brakes_status}">${getStatusLabel(formData.brakes_status)}</div>
+            ${formData.brakes_observation ? `<div class="observation">${formData.brakes_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>🛢️ Óleo do Motor</h4>
+            <div class="status ${formData.engine_oil_status}">${getStatusLabel(formData.engine_oil_status)}</div>
+            ${formData.engine_oil_observation ? `<div class="observation">${formData.engine_oil_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>🌡️ Arrefecimento</h4>
+            <div class="status ${formData.coolant_status}">${getStatusLabel(formData.coolant_status)}</div>
+            ${formData.coolant_observation ? `<div class="observation">${formData.coolant_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>💡 Sistema de Iluminação</h4>
+            <div class="status ${formData.lights_status}">${getStatusLabel(formData.lights_status)}</div>
+            ${formData.lights_observation ? `<div class="observation">${formData.lights_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>⚡ Sistema Elétrico</h4>
+            <div class="status ${formData.electrical_status}">${getStatusLabel(formData.electrical_status)}</div>
+            ${formData.electrical_observation ? `<div class="observation">${formData.electrical_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>🔧 Suspensão</h4>
+            <div class="status ${formData.suspension_status}">${getStatusLabel(formData.suspension_status)}</div>
+            ${formData.suspension_observation ? `<div class="observation">${formData.suspension_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>🧽 Limpeza</h4>
+            <div class="status ${formData.cleaning_status}">${getStatusLabel(formData.cleaning_status)}</div>
+            ${formData.cleaning_observation ? `<div class="observation">${formData.cleaning_observation}</div>` : ''}
+          </div>
+          
+          <div class="inspection-item">
+            <h4>💧 Vazamentos</h4>
+            <div class="status ${formData.leaks_status}">${getStatusLabel(formData.leaks_status)}</div>
+            ${formData.leaks_observation ? `<div class="observation">${formData.leaks_observation}</div>` : ''}
+          </div>
+        </div>
+
+        ${formData.general_observations ? `
+        <div class="info-card">
+          <h3>📝 Observações Gerais</h3>
+          <p>${formData.general_observations}</p>
+        </div>
+        ` : ''}
+
+        ${formData.damages ? `
+        <div class="info-card">
+          <h3>⚠️ Danos Identificados</h3>
+          <p>${formData.damages}</p>
+        </div>
+        ` : ''}
+
+        <div class="photos-section">
+          <h3>📸 Registros Fotográficos</h3>
+          <p><strong>Fotos da Motocicleta:</strong> ${formData.motorcycle_photos.length} foto(s) registrada(s)</p>
+          <p><strong>Fotos do Combustível:</strong> ${formData.fuel_photos.length} foto(s) registrada(s)</p>
+          <p><strong>Fotos do Odômetro:</strong> ${formData.km_photos.length} foto(s) registrada(s)</p>
+          ${formData.face_photo ? '<p><strong>Foto Facial:</strong> 1 foto registrada</p>' : ''}
+        </div>
+
+        <div class="signature-section">
+          <h3>✍️ Assinatura do Vigilante</h3>
+          ${formData.signature ? `<img src="${formData.signature}" alt="Assinatura" class="signature-img">` : '<p>Assinatura não disponível</p>'}
+          <p style="margin-top: 15px;"><strong>Vigilante:</strong> ${selectedVigilante.name}</p>
+          <p><strong>Data e Hora:</strong> ${dateStr} às ${timeStr}</p>
+        </div>
+
+        <div class="footer">
+          <p>Relatório gerado automaticamente pelo Sistema de Gestão de Vigilância</p>
+          <p>Data de geração: ${dateStr} às ${timeStr}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `checklist-${selectedMotorcycle.plate}-${dateStr.replace(/\//g, '-')}-${timeStr.replace(/:/g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Relatório PDF gerado com sucesso!');
   };
-
-  const getCameraTitle = () => {
-    switch (cameraType) {
-      case 'face': return 'Foto Facial';
-      case 'front': return 'Foto Frontal da Motocicleta';
-      case 'back': return 'Foto Traseira da Motocicleta';
-      case 'left': return 'Foto Lateral Esquerda da Motocicleta';
-      case 'right': return 'Foto Lateral Direita da Motocicleta';
-      case 'fuel': return 'Foto do Combustível';
-      case 'km': return 'Foto do Hodômetro';
-      default: return 'Capturar Foto';
-    }
-  };
-
-  if (showCamera) {
-    return (
-      <CameraCapture
-        onCapture={handlePhotoCapture}
-        onCancel={() => setShowCamera(false)}
-        title={getCameraTitle()}
-      />
-    );
-  }
-
-  if (showSignature) {
-    return (
-      <SignatureCapture
-        onCapture={handleSignatureCapture}
-        onCancel={() => setShowSignature(false)}
-      />
-    );
-  }
 
   return (
-    <Layout title="Checklist de Vistoria" onBack={onBack}>
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <User className="h-5 w-5 mr-2" />
-              Identificação
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Calendar className="h-5 w-5 text-blue-600" />
+          <span className="text-sm text-gray-600">
+            {new Date().toLocaleDateString('pt-BR')}
+          </span>
+          <Clock className="h-5 w-5 text-blue-600 ml-4" />
+          <span className="text-sm text-gray-600">
+            {new Date().toLocaleTimeString('pt-BR')}
+          </span>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Seleção do Vigilante e Motocicleta
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="condominium">Condomínio *</Label>
-              <Select 
-                value={selectedCondominiumId} 
-                onValueChange={setSelectedCondominiumId}
-                required
-              >
+              <Label htmlFor="vigilante">Vigilante</Label>
+              <Select value={formData.vigilante_id} onValueChange={(value) => setFormData({...formData, vigilante_id: value})}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o condomínio" />
+                  <SelectValue placeholder="Selecione o vigilante" />
                 </SelectTrigger>
                 <SelectContent>
-                  {condominiums.map((condo) => (
-                    <SelectItem key={condo.id} value={condo.id}>
-                      {condo.name}
+                  {vigilantes.map((vigilante) => (
+                    <SelectItem key={vigilante.id} value={vigilante.id}>
+                      {vigilante.name} - {vigilante.registration}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {selectedCondominiumId && (
-              <>
-                <div>
-                  <Label htmlFor="vigilante">Vigilante *</Label>
-                  <Select 
-                    value={formData.vigilante_id} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, vigilante_id: value }))}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o vigilante" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vigilantes.map((vigilante) => (
-                        <SelectItem key={vigilante.id} value={vigilante.id}>
-                          {vigilante.name} - {vigilante.registration}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label htmlFor="motorcycle">Motocicleta</Label>
+              <Select value={formData.motorcycle_id} onValueChange={(value) => setFormData({...formData, motorcycle_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a motocicleta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {motorcycles.map((motorcycle) => (
+                    <SelectItem key={motorcycle.id} value={motorcycle.id}>
+                      {motorcycle.plate} - {motorcycle.brand} {motorcycle.model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-                <div>
-                  <Label htmlFor="motorcycle">Motocicleta *</Label>
-                  <Select 
-                    value={formData.motorcycle_id} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, motorcycle_id: value }))}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a motocicleta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {motorcycles.map((motorcycle) => (
-                        <SelectItem key={motorcycle.id} value={motorcycle.id}>
-                          {motorcycle.plate} - {motorcycle.brand} {motorcycle.model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div>
+            <Label htmlFor="type">Tipo de Checklist</Label>
+            <Select value={formData.type} onValueChange={(value: 'start' | 'end') => setFormData({...formData, type: value})}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="start">Início de Turno</SelectItem>
+                <SelectItem value="end">Fim de Turno</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-                <div>
-                  <Label>Tipo de Vistoria *</Label>
-                  <RadioGroup 
-                    value={formData.type} 
-                    onValueChange={(value: 'start' | 'end') => setFormData(prev => ({ ...prev, type: value }))}
-                    className="flex flex-col sm:flex-row gap-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="start" id="start" />
-                      <Label htmlFor="start">Início do Turno</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="end" id="end" />
-                      <Label htmlFor="end">Fim do Turno</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <Label>Foto Facial</Label>
-                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                    <Button
-                      type="button"
-                      onClick={() => openCamera('face')}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      {formData.face_photo ? 'Refazer Foto' : 'Tirar Foto'}
-                    </Button>
-                    {formData.face_photo && (
-                      <div className="w-full sm:w-20 h-20 border rounded-lg overflow-hidden">
-                        <img 
-                          src={formData.face_photo} 
-                          alt="Foto facial" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {selectedCondominiumId && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <Bike className="h-5 w-5 mr-2" />
-                  Verificação de Itens
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {[
-                  { key: 'tires', label: 'Pneus' },
-                  { key: 'brakes', label: 'Freios' },
-                  { key: 'engine_oil', label: 'Óleo do Motor' },
-                  { key: 'coolant', label: 'Líquido de Arrefecimento' },
-                  { key: 'lights', label: 'Luzes' },
-                  { key: 'electrical', label: 'Sistema Elétrico' },
-                  { key: 'suspension', label: 'Suspensão' },
-                  { key: 'cleaning', label: 'Limpeza' },
-                  { key: 'leaks', label: 'Vazamentos' }
-                ].map((item) => (
-                  <div key={item.key} className="space-y-3 p-4 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-base font-medium">{item.label}</Label>
-                      <StatusIcon status={formData[`${item.key}_status` as keyof typeof formData] as string} />
-                    </div>
-                    <RadioGroup 
-                      value={formData[`${item.key}_status` as keyof typeof formData] as string}
-                      onValueChange={(value) => setFormData(prev => ({ 
-                        ...prev, 
-                        [`${item.key}_status`]: value 
-                      }))}
-                      className="grid grid-cols-2 sm:grid-cols-4 gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="good" id={`${item.key}-good`} />
-                        <Label htmlFor={`${item.key}-good`} className="text-green-700">Bom</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="regular" id={`${item.key}-regular`} />
-                        <Label htmlFor={`${item.key}-regular`} className="text-yellow-700">Regular</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="needs_repair" id={`${item.key}-repair`} />
-                        <Label htmlFor={`${item.key}-repair`} className="text-red-700">Precisa Reparo</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="na" id={`${item.key}-na`} />
-                        <Label htmlFor={`${item.key}-na`} className="text-gray-700">N/A</Label>
-                      </div>
-                    </RadioGroup>
-                    <Textarea
-                      placeholder="Observações (opcional)"
-                      value={formData[`${item.key}_observation` as keyof typeof formData] as string}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        [`${item.key}_observation`]: e.target.value 
-                      }))}
-                      className="mt-2"
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Fotos e Medições</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label className="text-base font-medium mb-4 block">Fotos da Motocicleta</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      { key: 'front', label: 'Foto Frontal' },
-                      { key: 'back', label: 'Foto Traseira' },
-                      { key: 'left', label: 'Foto Lateral Esquerda' },
-                      { key: 'right', label: 'Foto Lateral Direita' }
-                    ].map((photo) => (
-                      <div key={photo.key} className="space-y-2">
-                        <Label className="text-sm">{photo.label}</Label>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            type="button"
-                            onClick={() => openCamera(photo.key as any)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Camera className="h-4 w-4 mr-2" />
-                            {formData[`photo_${photo.key}` as keyof typeof formData] ? 'Refazer' : 'Tirar Foto'}
-                          </Button>
-                          {formData[`photo_${photo.key}` as keyof typeof formData] && (
-                            <div className="w-full h-20 border rounded-lg overflow-hidden">
-                              <img 
-                                src={formData[`photo_${photo.key}` as keyof typeof formData] as string} 
-                                alt={photo.label} 
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-base font-medium">Combustível</Label>
-                  <div className="flex gap-3 mt-2">
-                    <Button
-                      type="button"
-                      onClick={() => openCamera('fuel')}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      Foto do Combustível
-                    </Button>
-                    {formData.fuel_photos.length > 0 && (
-                      <div className="w-12 h-12 border rounded overflow-hidden">
-                        <img 
-                          src={formData.fuel_photos[0]} 
-                          alt="Combustível" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="motorcycle_km">Quilometragem</Label>
-                    <Input
-                      value={formData.motorcycle_km}
-                      onChange={(e) => setFormData(prev => ({ ...prev, motorcycle_km: e.target.value }))}
-                      placeholder="Ex: 12.345"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Foto do Hodômetro</Label>
-                    <div className="flex gap-3 mt-1">
-                      <Button
-                        type="button"
-                        onClick={() => openCamera('km')}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Foto
-                      </Button>
-                      {formData.km_photos.length > 0 && (
-                        <div className="w-12 h-12 border rounded overflow-hidden">
-                          <img 
-                            src={formData.km_photos[0]} 
-                            alt="Hodômetro" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Observações e Assinatura</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="general_observations">Observações Gerais</Label>
-                  <Textarea
-                    id="general_observations"
-                    value={formData.general_observations}
-                    onChange={(e) => setFormData(prev => ({ ...prev, general_observations: e.target.value }))}
-                    placeholder="Observações gerais sobre a vistoria"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="damages">Danos ou Problemas</Label>
-                  <Textarea
-                    id="damages"
-                    value={formData.damages}
-                    onChange={(e) => setFormData(prev => ({ ...prev, damages: e.target.value }))}
-                    placeholder="Descreva qualquer dano ou problema encontrado"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label>Assinatura</Label>
-                  <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                    <Button
-                      type="button"
-                      onClick={() => setShowSignature(true)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {formData.signature ? 'Refazer Assinatura' : 'Assinar'}
-                    </Button>
-                    {formData.signature && (
-                      <div className="w-full sm:w-32 h-20 border rounded-lg overflow-hidden bg-white">
-                        <img 
-                          src={formData.signature} 
-                          alt="Assinatura" 
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Button 
-                    type="button"
-                    onClick={generatePDF}
-                    variant="outline"
-                    className="text-lg py-6"
-                    disabled={loading || !selectedCondominiumId || !formData.vigilante_id || !formData.motorcycle_id}
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Download PDF
-                  </Button>
-                  
-                  <Button 
-                    type="submit" 
-                    className="bg-green-600 hover:bg-green-700 text-lg py-6"
-                    disabled={loading}
-                  >
-                    <Save className="h-5 w-5 mr-2" />
-                    {loading ? 'Salvando...' : 'Salvar Checklist'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </form>
-    </Layout>
+      <div className="flex gap-4 pt-6">
+        <Button 
+          onClick={handleSave} 
+          className="flex-1 flex items-center gap-2"
+          disabled={!formData.vigilante_id || !formData.motorcycle_id || !formData.signature}
+        >
+          <Save className="h-4 w-4" />
+          Salvar Checklist
+        </Button>
+        
+        <Button 
+          onClick={generatePDF} 
+          variant="outline" 
+          className="flex items-center gap-2"
+          disabled={!formData.vigilante_id || !formData.motorcycle_id}
+        >
+          <Download className="h-4 w-4" />
+          Download PDF
+        </Button>
+      </div>
+    </div>
   );
 };
 
