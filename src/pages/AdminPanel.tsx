@@ -93,6 +93,10 @@ const AdminPanel = () => {
     refetchChecklists();
   };
 
+  const handleCondominiumSelect = (condominium: Condominium) => {
+    setSelectedCondominiumId(condominium.id);
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -102,7 +106,7 @@ const AdminPanel = () => {
       <CondominiumSelector
         condominiums={condominiums}
         selectedId={selectedCondominiumId}
-        onSelect={setSelectedCondominiumId}
+        onSelect={handleCondominiumSelect}
         loading={condominiumsLoading}
       />
 
@@ -131,7 +135,7 @@ const AdminPanel = () => {
         </TabsList>
 
         <TabsContent value="condominiums" className="space-y-6">
-          <CondominiumManagement onUpdate={refetchCondominiums} />
+          <CondominiumManagement onSelect={handleCondominiumSelect} />
         </TabsContent>
 
         <TabsContent value="vigilantes" className="space-y-6">
