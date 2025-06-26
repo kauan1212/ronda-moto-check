@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Eye, Calendar, User, Bike, CheckSquare, Download } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Eye, Calendar, User, Bike, CheckSquare, Download, Trash2 } from 'lucide-react';
 import { Condominium, Checklist } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChecklistManagementProps {
   condominium: Condominium;
@@ -16,8 +18,34 @@ interface ChecklistManagementProps {
   onUpdate: () => void;
 }
 
-const ChecklistManagement = ({ condominium, checklists }: ChecklistManagementProps) => {
+const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistManagementProps) => {
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteChecklist = async (checklistId: string) => {
+    setDeletingId(checklistId);
+    
+    try {
+      const { error } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('id', checklistId);
+
+      if (error) {
+        console.error('Erro ao deletar checklist:', error);
+        toast.error('Erro ao deletar checklist');
+        return;
+      }
+
+      toast.success('Checklist deletado com sucesso!');
+      onUpdate(); // Atualizar a lista
+    } catch (error) {
+      console.error('Erro ao deletar checklist:', error);
+      toast.error('Erro ao deletar checklist');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -510,6 +538,40 @@ const ChecklistManagement = ({ condominium, checklists }: ChecklistManagementPro
                             <Download className="h-4 w-4 mr-2" />
                             Download PDF
                           </Button>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={deletingId === checklist.id}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {deletingId === checklist.id ? 'Deletando...' : 'Deletar'}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja deletar este checklist? Esta ação não pode ser desfeita.
+                                  <br /><br />
+                                  <strong>Vigilante:</strong> {checklist.vigilante_name}<br />
+                                  <strong>Motocicleta:</strong> {checklist.motorcycle_plate}<br />
+                                  <strong>Data:</strong> {format(new Date(checklist.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteChecklist(checklist.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Deletar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>

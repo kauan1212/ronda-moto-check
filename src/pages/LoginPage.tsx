@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LoginPageProps {
@@ -20,6 +21,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [success, setSuccess] = useState('');
+  const [userLogo, setUserLogo] = useState<string | null>(null);
   
   const { signIn, signUp, user, isAdmin } = useAuth();
 
@@ -29,6 +31,34 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
       onLoginSuccess(isAdmin);
     }
   }, [user, isAdmin, onLoginSuccess]);
+
+  // Carregar logo do usuário quando o email for inserido
+  useEffect(() => {
+    const loadUserLogo = async () => {
+      if (email && email.includes('@')) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('logo_url')
+            .eq('email', email)
+            .single();
+
+          if (data?.logo_url) {
+            setUserLogo(data.logo_url);
+          } else {
+            setUserLogo(null);
+          }
+        } catch (error) {
+          setUserLogo(null);
+        }
+      } else {
+        setUserLogo(null);
+      }
+    };
+
+    const timeoutId = setTimeout(loadUserLogo, 500);
+    return () => clearTimeout(timeoutId);
+  }, [email]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,14 +119,12 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
         console.log('Sign up successful:', data.user.email);
         
         if (data.user.email_confirmed_at) {
-          // Email já confirmado, fazer login automaticamente
           toast.success('Conta criada com sucesso!');
           setSuccess('Conta criada com sucesso! Fazendo login...');
         } else {
-          // Email precisa ser confirmado
           toast.success('Conta criada! Verifique seu email para confirmarr.');
           setSuccess('Conta criada com sucesso! Verifique seu email para confirmar antes de fazer login.');
-          setIsSignUp(false); // Mudar para aba de login
+          setIsSignUp(false);
         }
       }
     } catch (err: any) {
@@ -111,6 +139,15 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          {userLogo && (
+            <div className="flex justify-center mb-4">
+              <img 
+                src={userLogo} 
+                alt="Logo" 
+                className="max-h-20 max-w-full object-contain"
+              />
+            </div>
+          )}
           <CardTitle className="text-2xl">Sistema de Vigilância</CardTitle>
           <CardDescription>
             Faça login ou crie sua conta para acessar o sistema

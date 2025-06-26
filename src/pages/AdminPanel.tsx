@@ -1,263 +1,184 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Trash2, LogOut } from 'lucide-react';
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Users, Bike, CheckSquare, Image } from 'lucide-react';
+import CondominiumManagement from '@/components/CondominiumManagement';
+import VigilanteManagement from '@/components/VigilanteManagement';
+import MotorcycleManagement from '@/components/MotorcycleManagement';
+import ChecklistManagement from '@/components/ChecklistManagement';
+import LogoManagement from '@/components/LogoManagement';
+import CondominiumSelector from '@/components/CondominiumSelector';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
 
-interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  is_admin: boolean;
-  created_at: string;
-}
+const AdminPanel = () => {
+  const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
 
-interface AdminPanelProps {
-  onLogout: () => void;
-}
-
-const AdminPanel = ({ onLogout }: AdminPanelProps) => {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [creating, setCreating] = useState(false);
-  
-  const { signUp, signOut } = useAuth();
-
-  const fetchProfiles = async () => {
-    try {
+  const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
+    queryKey: ['condominiums'],
+    queryFn: async () => {
+      console.log('Fetching condominiums...');
       const { data, error } = await supabase
-        .from('profiles')
+        .from('condominiums')
         .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error: any) {
-      console.error('Error fetching profiles:', error);
-      toast.error('Erro ao carregar usuários');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProfiles();
-  }, []);
-
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-
-    try {
-      const { error } = await signUp(email, password, fullName);
+        .order('name');
       
       if (error) {
-        if (error.message.includes('User already registered')) {
-          toast.error('Este email já está cadastrado');
-        } else {
-          toast.error('Erro ao criar usuário: ' + error.message);
-        }
-      } else {
-        toast.success('Usuário criado com sucesso!');
-        setDialogOpen(false);
-        setEmail('');
-        setPassword('');
-        setFullName('');
-        fetchProfiles();
+        console.error('Error fetching condominiums:', error);
+        throw error;
       }
-    } catch (error: any) {
-      toast.error('Erro inesperado: ' + error.message);
-    } finally {
-      setCreating(false);
+      
+      console.log('Fetched condominiums:', data?.length);
+      return data as Condominium[];
     }
+  });
+
+  const { data: vigilantes = [], refetch: refetchVigilantes } = useQuery({
+    queryKey: ['vigilantes', selectedCondominiumId],
+    queryFn: async () => {
+      if (!selectedCondominiumId) return [];
+      
+      const { data, error } = await supabase
+        .from('vigilantes')
+        .select('*')
+        .eq('condominium_id', selectedCondominiumId)
+        .order('name');
+      
+      if (error) throw error;
+      return data as Vigilante[];
+    },
+    enabled: !!selectedCondominiumId
+  });
+
+  const { data: motorcycles = [], refetch: refetchMotorcycles } = useQuery({
+    queryKey: ['motorcycles', selectedCondominiumId],
+    queryFn: async () => {
+      if (!selectedCondominiumId) return [];
+      
+      const { data, error } = await supabase
+        .from('motorcycles')
+        .select('*')
+        .eq('condominium_id', selectedCondominiumId)
+        .order('plate');
+      
+      if (error) throw error;
+      return data as Motorcycle[];
+    },
+    enabled: !!selectedCondominiumId
+  });
+
+  const { data: checklists = [], refetch: refetchChecklists } = useQuery({
+    queryKey: ['checklists', selectedCondominiumId],
+    queryFn: async () => {
+      if (!selectedCondominiumId) return [];
+      
+      const { data, error } = await supabase
+        .from('checklists')
+        .select('*')
+        .eq('condominium_id', selectedCondominiumId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Checklist[];
+    },
+    enabled: !!selectedCondominiumId
+  });
+
+  const selectedCondominium = condominiums.find(c => c.id === selectedCondominiumId);
+
+  const handleUpdate = () => {
+    refetchVigilantes();
+    refetchMotorcycles();
+    refetchChecklists();
   };
-
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o usuário "${userEmail}"?`)) {
-      return;
-    }
-
-    try {
-      // Note: In a real app, you'd need an admin function to delete users
-      // For now, we'll just show a message
-      toast.error('Funcionalidade de exclusão de usuários não implementada ainda');
-    } catch (error: any) {
-      toast.error('Erro ao excluir usuário: ' + error.message);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      onLogout();
-    } catch (error: any) {
-      toast.error('Erro ao fazer logout');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-lg">Carregando...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <img 
-                src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
-                alt="Grupo Celdan Facilities" 
-                className="h-8 w-8 rounded"
-              />
-              <h1 className="text-xl font-bold text-slate-800 ml-3">
-                Painel Administrativo
-              </h1>
-            </div>
-            
-            <Button 
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-              size="sm"
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Painel Administrativo</h1>
       </div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Gerenciamento de Usuários ({profiles.length})
-                </CardTitle>
-                <CardDescription>
-                  Gerencie os usuários do sistema
-                </CardDescription>
-              </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Usuário
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Criar Novo Usuário</DialogTitle>
-                    <DialogDescription>
-                      Preencha as informações do novo usuário
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <form onSubmit={handleCreateUser} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Nome Completo</Label>
-                      <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Nome completo"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="email@exemplo.com"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="********"
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button type="submit" disabled={creating}>
-                        {creating ? 'Criando...' : 'Criar Usuário'}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+
+      <CondominiumSelector
+        condominiums={condominiums}
+        selectedId={selectedCondominiumId}
+        onSelect={setSelectedCondominiumId}
+        loading={condominiumsLoading}
+      />
+
+      <Tabs defaultValue="condominiums" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="condominiums" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Condomínios
+          </TabsTrigger>
+          <TabsTrigger value="vigilantes" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Vigilantes
+          </TabsTrigger>
+          <TabsTrigger value="motorcycles" className="flex items-center gap-2">
+            <Bike className="h-4 w-4" />
+            Motocicletas
+          </TabsTrigger>
+          <TabsTrigger value="checklists" className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4" />
+            Checklists
+          </TabsTrigger>
+          <TabsTrigger value="logo" className="flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Logo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="condominiums" className="space-y-6">
+          <CondominiumManagement onUpdate={refetchCondominiums} />
+        </TabsContent>
+
+        <TabsContent value="vigilantes" className="space-y-6">
+          {selectedCondominium ? (
+            <VigilanteManagement 
+              condominium={selectedCondominium}
+              vigilantes={vigilantes}
+              onUpdate={handleUpdate}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Selecione um condomínio para gerenciar vigilantes
             </div>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="space-y-3">
-              {profiles.map((profile) => (
-                <div key={profile.id} className="flex justify-between items-center p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{profile.full_name || 'Nome não informado'}</p>
-                    <p className="text-sm text-gray-600">{profile.email}</p>
-                    <p className="text-xs text-gray-500">
-                      Criado em: {new Date(profile.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={profile.is_admin ? 'default' : 'secondary'}>
-                      {profile.is_admin ? 'Admin' : 'Usuário'}
-                    </Badge>
-                    {!profile.is_admin && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDeleteUser(profile.id, profile.email)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {profiles.length === 0 && (
-                <p className="text-center text-gray-500 py-8">
-                  Nenhum usuário encontrado
-                </p>
-              )}
+          )}
+        </TabsContent>
+
+        <TabsContent value="motorcycles" className="space-y-6">
+          {selectedCondominium ? (
+            <MotorcycleManagement 
+              condominium={selectedCondominium}
+              motorcycles={motorcycles}
+              onUpdate={handleUpdate}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Selecione um condomínio para gerenciar motocicletas
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="checklists" className="space-y-6">
+          {selectedCondominium ? (
+            <ChecklistManagement 
+              condominium={selectedCondominium}
+              checklists={checklists}
+              onUpdate={handleUpdate}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Selecione um condomínio para visualizar checklists
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="logo" className="space-y-6">
+          <LogoManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
