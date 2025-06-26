@@ -17,6 +17,11 @@ import ObservationsSection from './checklist/ObservationsSection';
 import SignatureSection from './checklist/SignatureSection';
 import ChecklistActions from './checklist/ChecklistActions';
 
+interface VehiclePhoto {
+  url: string;
+  category: 'front' | 'back' | 'left' | 'right';
+}
+
 interface ChecklistFormData {
   vigilante_id: string;
   motorcycle_id: string;
@@ -40,7 +45,7 @@ interface ChecklistFormData {
   cleaning_observation: string;
   leaks_status: string;
   leaks_observation: string;
-  motorcycle_photos: string[];
+  vehicle_photos: VehiclePhoto[];
   fuel_photos: string[];
   motorcycle_km: string;
   km_photos: string[];
@@ -78,7 +83,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     cleaning_observation: '',
     leaks_status: '',
     leaks_observation: '',
-    motorcycle_photos: [],
+    vehicle_photos: [],
     fuel_photos: [],
     motorcycle_km: '',
     km_photos: [],
@@ -91,7 +96,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
   const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
   const [showFaceCamera, setShowFaceCamera] = useState(false);
-  const [showMotorcycleCamera, setShowMotorcycleCamera] = useState(false);
+  const [showVehicleCamera, setShowVehicleCamera] = useState(false);
+  const [currentVehiclePhotoCategory, setCurrentVehiclePhotoCategory] = useState<'front' | 'back' | 'left' | 'right'>('front');
   const [showFuelCamera, setShowFuelCamera] = useState(false);
   const [showKmCamera, setShowKmCamera] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -120,16 +126,20 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
-  const handlePhotoCapture = (photo: string, type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
+  const handlePhotoCapture = (photo: string, type: 'face' | 'vehicle' | 'fuel' | 'km') => {
     console.log('Foto capturada para:', type);
     switch (type) {
       case 'face':
         updateFormData({ face_photo: photo });
         setShowFaceCamera(false);
         break;
-      case 'motorcycle':
-        updateFormData({ motorcycle_photos: [...formData.motorcycle_photos, photo] });
-        setShowMotorcycleCamera(false);
+      case 'vehicle':
+        const newVehiclePhoto: VehiclePhoto = {
+          url: photo,
+          category: currentVehiclePhotoCategory
+        };
+        updateFormData({ vehicle_photos: [...formData.vehicle_photos, newVehiclePhoto] });
+        setShowVehicleCamera(false);
         break;
       case 'fuel':
         updateFormData({ fuel_photos: [...formData.fuel_photos, photo] });
@@ -143,10 +153,10 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     toast.success('Foto capturada com sucesso!');
   };
 
-  const removePhoto = (index: number, type: 'motorcycle' | 'fuel' | 'km') => {
+  const removePhoto = (index: number, type: 'vehicle' | 'fuel' | 'km') => {
     switch (type) {
-      case 'motorcycle':
-        updateFormData({ motorcycle_photos: formData.motorcycle_photos.filter((_, i) => i !== index) });
+      case 'vehicle':
+        updateFormData({ vehicle_photos: formData.vehicle_photos.filter((_, i) => i !== index) });
         break;
       case 'fuel':
         updateFormData({ fuel_photos: formData.fuel_photos.filter((_, i) => i !== index) });
@@ -158,9 +168,14 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     toast.success('Foto removida com sucesso!');
   };
 
+  const handleVehiclePhotoCapture = (category: 'front' | 'back' | 'left' | 'right') => {
+    setCurrentVehiclePhotoCategory(category);
+    setShowVehicleCamera(true);
+  };
+
   const handleSave = async () => {
     if (!formData.vigilante_id || !formData.motorcycle_id) {
-      toast.error('Por favor, selecione um vigilante e uma motocicleta');
+      toast.error('Por favor, selecione um vigilante e um veículo');
       return;
     }
 
@@ -176,7 +191,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
 
       if (!selectedVigilante || !selectedMotorcycle) {
-        toast.error('Vigilante ou motocicleta não encontrados');
+        toast.error('Vigilante ou veículo não encontrados');
         return;
       }
 
@@ -205,7 +220,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         cleaning_observation: formData.cleaning_observation || null,
         leaks_status: formData.leaks_status || null,
         leaks_observation: formData.leaks_observation || null,
-        motorcycle_photos: formData.motorcycle_photos,
+        motorcycle_photos: [],
+        vehicle_photos: formData.vehicle_photos,
         fuel_photos: formData.fuel_photos,
         motorcycle_km: formData.motorcycle_km || null,
         km_photos: formData.km_photos,
@@ -257,7 +273,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         cleaning_observation: '',
         leaks_status: '',
         leaks_observation: '',
-        motorcycle_photos: [],
+        vehicle_photos: [],
         fuel_photos: [],
         motorcycle_km: '',
         km_photos: [],
@@ -283,7 +299,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     const timeStr = currentDate.toLocaleTimeString('pt-BR');
 
     if (!selectedVigilante || !selectedMotorcycle) {
-      toast.error('Selecione um vigilante e uma motocicleta primeiro');
+      toast.error('Selecione um vigilante e um veículo primeiro');
       return;
     }
 
@@ -417,7 +433,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       </head>
       <body>
         <div class="header">
-          <h1>RELATÓRIO DE VISTORIA DE MOTOCICLETA</h1>
+          <h1>RELATÓRIO DE VISTORIA DE VEÍCULO</h1>
           <div class="datetime-info">
             <strong>Data:</strong> ${dateStr} | <strong>Horário:</strong> ${timeStr}
           </div>
@@ -439,7 +455,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
           </div>
           
           <div class="info-card">
-            <h3>🏍️ Dados da Motocicleta</h3>
+            <h3>🏍️ Dados do Veículo</h3>
             <p><strong>Placa:</strong> ${selectedMotorcycle.plate}</p>
             <p><strong>Marca/Modelo:</strong> ${selectedMotorcycle.brand} ${selectedMotorcycle.model}</p>
             <p><strong>Ano:</strong> ${selectedMotorcycle.year}</p>
@@ -521,7 +537,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
 
         <div class="photos-section">
           <h3>📸 Registros Fotográficos</h3>
-          <p><strong>Fotos da Motocicleta:</strong> ${formData.motorcycle_photos.length} foto(s) registrada(s)</p>
+          <p><strong>Fotos do Veículo:</strong> ${formData.vehicle_photos.length} foto(s) registrada(s)</p>
           <p><strong>Fotos do Combustível:</strong> ${formData.fuel_photos.length} foto(s) registrada(s)</p>
           <p><strong>Fotos do Odômetro:</strong> ${formData.km_photos.length} foto(s) registrada(s)</p>
           ${formData.face_photo ? '<p><strong>Foto Facial:</strong> 1 foto registrada</p>' : ''}
@@ -556,7 +572,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="max-w-4xl mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
       <ChecklistHeader />
 
       <PersonnelSelection
@@ -581,9 +597,9 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       />
 
       <VehiclePhotos
-        photos={formData.motorcycle_photos}
-        onCaptureClick={() => setShowMotorcycleCamera(true)}
-        onRemovePhoto={(index) => removePhoto(index, 'motorcycle')}
+        photos={formData.vehicle_photos}
+        onCaptureClick={handleVehiclePhotoCapture}
+        onRemovePhoto={(index) => removePhoto(index, 'vehicle')}
       />
 
       <FuelSection
@@ -629,11 +645,13 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         />
       )}
 
-      {showMotorcycleCamera && (
+      {showVehicleCamera && (
         <CameraCapture
-          onCapture={(photo) => handlePhotoCapture(photo, 'motorcycle')}
-          onCancel={() => setShowMotorcycleCamera(false)}
-          title="Capturar Foto da Motocicleta"
+          onCapture={(photo) => handlePhotoCapture(photo, 'vehicle')}
+          onCancel={() => setShowVehicleCamera(false)}
+          title={`Capturar Foto do Veículo - ${currentVehiclePhotoCategory === 'front' ? 'Frente' : 
+                  currentVehiclePhotoCategory === 'back' ? 'Trás' : 
+                  currentVehiclePhotoCategory === 'left' ? 'Lateral Esquerda' : 'Lateral Direita'}`}
         />
       )}
 

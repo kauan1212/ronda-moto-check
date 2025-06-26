@@ -1,166 +1,370 @@
 
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { Checklist } from '@/types';
+import { Vigilante, Motorcycle, Checklist } from '@/types';
 
-export const generateChecklistPDF = async (checklist: Checklist) => {
-  const pdf = new jsPDF();
-  
-  // Create HTML content for the PDF
-  const htmlContent = document.createElement('div');
-  htmlContent.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-      <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
-        <h1 style="color: #2563eb; font-size: 24px; margin-bottom: 10px;">RELATÓRIO DE VISTORIA DE MOTOCICLETA</h1>
-        <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
-          <strong style="color: #1e40af;">Data:</strong> ${new Date().toLocaleDateString('pt-BR')} | 
-          <strong style="color: #1e40af;">Horário:</strong> ${new Date().toLocaleTimeString('pt-BR')}
-        </div>
-      </div>
+interface VehiclePhoto {
+  url: string;
+  category: 'front' | 'back' | 'left' | 'right';
+}
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <h3 style="color: #1e40af; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 5px;">📋 Informações da Vistoria</h3>
-          <p><strong>Tipo:</strong> ${checklist.type === 'start' ? 'Início de Turno' : 'Fim de Turno'}</p>
-          <p><strong>Status:</strong> ${checklist.status}</p>
-          <p><strong>Quilometragem:</strong> ${checklist.motorcycle_km || 'Não informado'}</p>
-        </div>
-        
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <h3 style="color: #1e40af; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 5px;">👮 Vigilante Responsável</h3>
-          <p><strong>Nome:</strong> ${checklist.vigilante_name}</p>
-          <p><strong>ID:</strong> ${checklist.vigilante_id}</p>
-        </div>
-        
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <h3 style="color: #1e40af; margin-bottom: 15px; border-bottom: 2px solid #2563eb; padding-bottom: 5px;">🏍️ Dados da Motocicleta</h3>
-          <p><strong>Placa:</strong> ${checklist.motorcycle_plate}</p>
-          <p><strong>ID:</strong> ${checklist.motorcycle_id}</p>
-        </div>
-      </div>
+interface ChecklistData extends Omit<Checklist, 'vehicle_photos'> {
+  vehicle_photos: VehiclePhoto[];
+}
 
-      <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px;">🔍 ITENS VERIFICADOS</h2>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 30px 0;">
-        ${createInspectionItem('🛞 Pneus', checklist.tires_status, checklist.tires_observation)}
-        ${createInspectionItem('🛑 Freios', checklist.brakes_status, checklist.brakes_observation)}
-        ${createInspectionItem('🛢️ Óleo do Motor', checklist.engine_oil_status, checklist.engine_oil_observation)}
-        ${createInspectionItem('🌡️ Arrefecimento', checklist.coolant_status, checklist.coolant_observation)}
-        ${createInspectionItem('💡 Sistema de Iluminação', checklist.lights_status, checklist.lights_observation)}
-        ${createInspectionItem('⚡ Sistema Elétrico', checklist.electrical_status, checklist.electrical_observation)}
-        ${createInspectionItem('🔧 Suspensão', checklist.suspension_status, checklist.suspension_observation)}
-        ${createInspectionItem('🧽 Limpeza', checklist.cleaning_status, checklist.cleaning_observation)}
-        ${createInspectionItem('💧 Vazamentos', checklist.leaks_status, checklist.leaks_observation)}
-      </div>
+const loadImageAsBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+      resolve(dataURL);
+    };
+    img.onerror = () => resolve(''); // Return empty string if image fails to load
+    img.src = url;
+  });
+};
 
-      ${checklist.general_observations ? `
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin-bottom: 15px;">📝 Observações Gerais</h3>
-        <p>${checklist.general_observations}</p>
-      </div>
-      ` : ''}
-
-      ${checklist.damages ? `
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin-bottom: 15px;">⚠️ Danos Identificados</h3>
-        <p>${checklist.damages}</p>
-      </div>
-      ` : ''}
-
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin-bottom: 15px;">📸 Registros Fotográficos</h3>
-        <p><strong>Fotos da Motocicleta:</strong> ${checklist.motorcycle_photos.length} foto(s) registrada(s)</p>
-        <p><strong>Fotos do Combustível:</strong> ${checklist.fuel_photos.length} foto(s) registrada(s)</p>
-        <p><strong>Fotos do Odômetro:</strong> ${checklist.km_photos.length} foto(s) registrada(s)</p>
-        ${checklist.face_photo ? '<p><strong>Foto Facial:</strong> 1 foto registrada</p>' : ''}
-      </div>
-
-      ${checklist.signature ? `
-      <div style="background-color: #ffffff; padding: 20px; border: 2px solid #e5e7eb; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #1e40af; margin-bottom: 15px;">✍️ Assinatura do Vigilante</h3>
-        <img src="${checklist.signature}" alt="Assinatura" style="max-width: 300px; border: 1px solid #d1d5db; border-radius: 4px;">
-        <p style="margin-top: 15px;"><strong>Vigilante:</strong> ${checklist.vigilante_name}</p>
-        <p><strong>Data e Hora:</strong> ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-      </div>
-      ` : ''}
-
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px;">
-        <p>Relatório gerado automaticamente pelo Sistema de Gestão de Vigilância</p>
-        <p>Data de geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-      </div>
-    </div>
-  `;
-
-  // Add the HTML content to the document body temporarily
-  document.body.appendChild(htmlContent);
-
-  try {
-    // Convert HTML to canvas
-    const canvas = await html2canvas(htmlContent, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff'
-    });
-
-    // Remove the temporary element
-    document.body.removeChild(htmlContent);
-
-    // Calculate PDF dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-
-    let position = 0;
-
-    // Add first page
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    // Save the PDF
-    pdf.save(`checklist-${checklist.motorcycle_plate}-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
-  } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-    document.body.removeChild(htmlContent);
-    throw error;
+const getCategoryLabel = (category: string) => {
+  switch (category) {
+    case 'front': return 'Frente';
+    case 'back': return 'Trás';
+    case 'left': return 'Lateral Esquerda';
+    case 'right': return 'Lateral Direita';
+    default: return category;
   }
 };
 
-function createInspectionItem(title: string, status?: string, observation?: string): string {
+export const generateChecklistPDF = async (
+  checklistData: ChecklistData,
+  vigilante: Vigilante,
+  motorcycle: Motorcycle
+) => {
+  const pdf = new jsPDF();
+  let yPosition = 20;
+  const pageHeight = pdf.internal.pageSize.height;
+  const pageWidth = pdf.internal.pageSize.width;
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+
+  // Helper function to check if we need a new page
+  const checkNewPage = (neededHeight: number) => {
+    if (yPosition + neededHeight > pageHeight - 20) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+  };
+
+  // Helper function to add wrapped text
+  const addWrappedText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 12) => {
+    pdf.setFontSize(fontSize);
+    const lines = pdf.splitTextToSize(text, maxWidth);
+    pdf.text(lines, x, y);
+    return lines.length * (fontSize * 0.6); // Return height used
+  };
+
+  // Header
+  pdf.setFontSize(20);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('RELATÓRIO DE VISTORIA DE VEÍCULO', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 15;
+
+  // Date and time
+  const currentDate = new Date();
+  const dateStr = currentDate.toLocaleDateString('pt-BR');
+  const timeStr = currentDate.toLocaleTimeString('pt-BR');
+  
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(`Data: ${dateStr} | Horário: ${timeStr}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 20;
+
+  // Basic Information
+  checkNewPage(60);
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('INFORMAÇÕES BÁSICAS', margin, yPosition);
+  yPosition += 15;
+
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  
+  const basicInfo = [
+    `Vigilante: ${vigilante.name}`,
+    `Email: ${vigilante.email}`,
+    `Matrícula: ${vigilante.registration}`,
+    `Veículo: ${motorcycle.plate} - ${motorcycle.brand} ${motorcycle.model}`,
+    `Ano: ${motorcycle.year} | Cor: ${motorcycle.color}`,
+    `Tipo de Vistoria: ${checklistData.type === 'start' ? 'Início de Turno' : 'Fim de Turno'}`,
+    `Quilometragem: ${checklistData.motorcycle_km || 'Não informado'}`
+  ];
+
+  basicInfo.forEach(info => {
+    pdf.text(info, margin, yPosition);
+    yPosition += 8;
+  });
+
+  yPosition += 10;
+
+  // Inspection Items
+  checkNewPage(80);
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ITENS VERIFICADOS', margin, yPosition);
+  yPosition += 15;
+
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'good': return 'Bom';
-      case 'regular': return 'Regular';
-      case 'needs_repair': return 'Precisa Reparo';
+      case 'good': return 'BOM';
+      case 'regular': return 'REGULAR';
+      case 'needs_repair': return 'NECESSÁRIO REPARO';
       case 'na': return 'N/A';
-      default: return 'Não verificado';
+      default: return 'NÃO VERIFICADO';
     }
   };
 
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'good': return 'background-color: #dcfce7; color: #166534;';
-      case 'regular': return 'background-color: #fef3c7; color: #92400e;';
-      case 'needs_repair': return 'background-color: #fee2e2; color: #991b1b;';
-      case 'na': return 'background-color: #f3f4f6; color: #6b7280;';
-      default: return 'background-color: #f3f4f6; color: #6b7280;';
-    }
-  };
+  const inspectionItems = [
+    { label: 'Pneus', status: checklistData.tires_status, observation: checklistData.tires_observation },
+    { label: 'Freios', status: checklistData.brakes_status, observation: checklistData.brakes_observation },
+    { label: 'Óleo do Motor', status: checklistData.engine_oil_status, observation: checklistData.engine_oil_observation },
+    { label: 'Arrefecimento', status: checklistData.coolant_status, observation: checklistData.coolant_observation },
+    { label: 'Iluminação', status: checklistData.lights_status, observation: checklistData.lights_observation },
+    { label: 'Sistema Elétrico', status: checklistData.electrical_status, observation: checklistData.electrical_observation },
+    { label: 'Suspensão', status: checklistData.suspension_status, observation: checklistData.suspension_observation },
+    { label: 'Limpeza', status: checklistData.cleaning_status, observation: checklistData.cleaning_observation },
+    { label: 'Vazamentos', status: checklistData.leaks_status, observation: checklistData.leaks_observation }
+  ];
 
-  return `
-    <div style="background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; padding: 20px;">
-      <h4 style="color: #374151; margin-bottom: 10px; font-size: 16px; font-weight: bold;">${title}</h4>
-      <div style="display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; ${getStatusClass(status || '')}">${getStatusLabel(status || '')}</div>
-      ${observation ? `<div style="background-color: #f9fafb; padding: 10px; border-radius: 4px; font-style: italic; color: #6b7280;">${observation}</div>` : ''}
-    </div>
-  `;
-}
+  pdf.setFontSize(12);
+  inspectionItems.forEach(item => {
+    checkNewPage(25);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${item.label}:`, margin, yPosition);
+    
+    pdf.setFont('helvetica', 'normal');
+    const statusText = `Status: ${getStatusLabel(item.status || '')}`;
+    pdf.text(statusText, margin + 60, yPosition);
+    yPosition += 8;
+    
+    if (item.observation) {
+      pdf.setFont('helvetica', 'italic');
+      const obsHeight = addWrappedText(`Observação: ${item.observation}`, margin + 10, yPosition, contentWidth - 10, 10);
+      yPosition += obsHeight + 5;
+    } else {
+      yPosition += 5;
+    }
+  });
+
+  // Photos section
+  if (checklistData.vehicle_photos && checklistData.vehicle_photos.length > 0) {
+    checkNewPage(100);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FOTOS DO VEÍCULO', margin, yPosition);
+    yPosition += 15;
+
+    try {
+      for (const photo of checklistData.vehicle_photos) {
+        checkNewPage(80);
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${getCategoryLabel(photo.category)}:`, margin, yPosition);
+        yPosition += 10;
+        
+        try {
+          const imageData = await loadImageAsBase64(photo.url);
+          if (imageData) {
+            const imgWidth = 60;
+            const imgHeight = 45;
+            pdf.addImage(imageData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+          }
+        } catch (error) {
+          console.error('Erro ao carregar imagem do veículo:', error);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('(Imagem não disponível)', margin, yPosition);
+          yPosition += 15;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao processar fotos do veículo:', error);
+    }
+  }
+
+  // Fuel photos
+  if (checklistData.fuel_photos && checklistData.fuel_photos.length > 0) {
+    checkNewPage(100);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FOTOS DO COMBUSTÍVEL', margin, yPosition);
+    yPosition += 15;
+
+    try {
+      for (let i = 0; i < checklistData.fuel_photos.length; i++) {
+        checkNewPage(80);
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Foto ${i + 1}:`, margin, yPosition);
+        yPosition += 10;
+        
+        try {
+          const imageData = await loadImageAsBase64(checklistData.fuel_photos[i]);
+          if (imageData) {
+            const imgWidth = 60;
+            const imgHeight = 45;
+            pdf.addImage(imageData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+          }
+        } catch (error) {
+          console.error('Erro ao carregar foto do combustível:', error);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('(Imagem não disponível)', margin, yPosition);
+          yPosition += 15;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao processar fotos do combustível:', error);
+    }
+  }
+
+  // KM photos
+  if (checklistData.km_photos && checklistData.km_photos.length > 0) {
+    checkNewPage(100);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FOTOS DO ODÔMETRO', margin, yPosition);
+    yPosition += 15;
+
+    try {
+      for (let i = 0; i < checklistData.km_photos.length; i++) {
+        checkNewPage(80);
+        
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Foto ${i + 1}:`, margin, yPosition);
+        yPosition += 10;
+        
+        try {
+          const imageData = await loadImageAsBase64(checklistData.km_photos[i]);
+          if (imageData) {
+            const imgWidth = 60;
+            const imgHeight = 45;
+            pdf.addImage(imageData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 15;
+          }
+        } catch (error) {
+          console.error('Erro ao carregar foto do odômetro:', error);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('(Imagem não disponível)', margin, yPosition);
+          yPosition += 15;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao processar fotos do odômetro:', error);
+    }
+  }
+
+  // Face photo
+  if (checklistData.face_photo) {
+    checkNewPage(80);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FOTO FACIAL DO VIGILANTE', margin, yPosition);
+    yPosition += 15;
+
+    try {
+      const imageData = await loadImageAsBase64(checklistData.face_photo);
+      if (imageData) {
+        const imgWidth = 60;
+        const imgHeight = 45;
+        pdf.addImage(imageData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 15;
+      }
+    } catch (error) {
+      console.error('Erro ao carregar foto facial:', error);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text('(Imagem não disponível)', margin, yPosition);
+      yPosition += 15;
+    }
+  }
+
+  // Observations
+  if (checklistData.general_observations || checklistData.damages) {
+    checkNewPage(60);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('OBSERVAÇÕES', margin, yPosition);
+    yPosition += 15;
+
+    if (checklistData.general_observations) {
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Observações Gerais:', margin, yPosition);
+      yPosition += 8;
+      
+      pdf.setFont('helvetica', 'normal');
+      const obsHeight = addWrappedText(checklistData.general_observations, margin, yPosition, contentWidth, 12);
+      yPosition += obsHeight + 10;
+    }
+
+    if (checklistData.damages) {
+      checkNewPage(30);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Danos Identificados:', margin, yPosition);
+      yPosition += 8;
+      
+      pdf.setFont('helvetica', 'normal');
+      const damageHeight = addWrappedText(checklistData.damages, margin, yPosition, contentWidth, 12);
+      yPosition += damageHeight + 10;
+    }
+  }
+
+  // Signature
+  if (checklistData.signature) {
+    checkNewPage(80);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('ASSINATURA DO VIGILANTE', margin, yPosition);
+    yPosition += 15;
+
+    try {
+      const imgWidth = 80;
+      const imgHeight = 30;
+      pdf.addImage(checklistData.signature, 'PNG', margin, yPosition, imgWidth, imgHeight);
+      yPosition += imgHeight + 10;
+    } catch (error) {
+      console.error('Erro ao adicionar assinatura:', error);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text('(Assinatura não disponível)', margin, yPosition);
+      yPosition += 15;
+    }
+
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Vigilante: ${vigilante.name}`, margin, yPosition);
+    yPosition += 8;
+    pdf.text(`Data e Hora: ${dateStr} às ${timeStr}`, margin, yPosition);
+  }
+
+  // Footer
+  const totalPages = pdf.internal.pages.length - 1;
+  for (let i = 1; i <= totalPages; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+    pdf.text(`Relatório gerado em ${dateStr} às ${timeStr}`, margin, pageHeight - 10);
+  }
+
+  // Save the PDF
+  const fileName = `checklist-${motorcycle.plate}-${dateStr.replace(/\//g, '-')}-${timeStr.replace(/:/g, '-')}.pdf`;
+  pdf.save(fileName);
+};

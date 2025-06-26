@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Bike, CheckSquare, Image } from 'lucide-react';
+import { Building2, Users, Car, CheckSquare, Image } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import VigilanteManagement from '@/components/VigilanteManagement';
 import MotorcycleManagement from '@/components/MotorcycleManagement';
@@ -98,9 +98,9 @@ const AdminPanel = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Painel Administrativo</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Painel Administrativo</h1>
       </div>
 
       <CondominiumSelector
@@ -110,35 +110,41 @@ const AdminPanel = () => {
         loading={condominiumsLoading}
       />
 
-      <Tabs defaultValue="condominiums" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="condominiums" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Condomínios
-          </TabsTrigger>
-          <TabsTrigger value="vigilantes" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Vigilantes
-          </TabsTrigger>
-          <TabsTrigger value="motorcycles" className="flex items-center gap-2">
-            <Bike className="h-4 w-4" />
-            Motocicletas
-          </TabsTrigger>
-          <TabsTrigger value="checklists" className="flex items-center gap-2">
-            <CheckSquare className="h-4 w-4" />
-            Checklists
-          </TabsTrigger>
-          <TabsTrigger value="logo" className="flex items-center gap-2">
-            <Image className="h-4 w-4" />
-            Logo
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="condominiums" className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-5 min-w-max">
+            <TabsTrigger value="condominiums" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Condomínios</span>
+              <span className="sm:hidden">Cond.</span>
+            </TabsTrigger>
+            <TabsTrigger value="vigilantes" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Vigilantes</span>
+              <span className="sm:hidden">Vigil.</span>
+            </TabsTrigger>
+            <TabsTrigger value="motorcycles" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Car className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Veículos</span>
+              <span className="sm:hidden">Veíc.</span>
+            </TabsTrigger>
+            <TabsTrigger value="checklists" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Checklists</span>
+              <span className="sm:hidden">Check.</span>
+            </TabsTrigger>
+            <TabsTrigger value="logo" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Image className="h-3 w-3 sm:h-4 sm:w-4" />
+              Logo
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="condominiums" className="space-y-6">
+        <TabsContent value="condominiums" className="space-y-4 sm:space-y-6">
           <CondominiumManagement onSelect={handleCondominiumSelect} />
         </TabsContent>
 
-        <TabsContent value="vigilantes" className="space-y-6">
+        <TabsContent value="vigilantes" className="space-y-4 sm:space-y-6">
           {selectedCondominium ? (
             <VigilanteManagement 
               condominium={selectedCondominium}
@@ -146,13 +152,13 @@ const AdminPanel = () => {
               onUpdate={handleUpdate}
             />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground text-sm sm:text-base px-4">
               Selecione um condomínio para gerenciar vigilantes
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="motorcycles" className="space-y-6">
+        <TabsContent value="motorcycles" className="space-y-4 sm:space-y-6">
           {selectedCondominium ? (
             <MotorcycleManagement 
               condominium={selectedCondominium}
@@ -160,13 +166,13 @@ const AdminPanel = () => {
               onUpdate={handleUpdate}
             />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Selecione um condomínio para gerenciar motocicletas
+            <div className="text-center py-8 text-muted-foreground text-sm sm:text-base px-4">
+              Selecione um condomínio para gerenciar veículos
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="checklists" className="space-y-6">
+        <TabsContent value="checklists" className="space-y-4 sm:space-y-6">
           {selectedCondominium ? (
             <ChecklistManagement 
               condominium={selectedCondominium}
@@ -174,13 +180,13 @@ const AdminPanel = () => {
               onUpdate={handleUpdate}
             />
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground text-sm sm:text-base px-4">
               Selecione um condomínio para visualizar checklists
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="logo" className="space-y-6">
+        <TabsContent value="logo" className="space-y-4 sm:space-y-6">
           <LogoManagement />
         </TabsContent>
       </Tabs>

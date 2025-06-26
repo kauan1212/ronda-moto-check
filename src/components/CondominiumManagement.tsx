@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -170,27 +171,27 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Carregando condomínios...</p>
+          <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 text-sm sm:text-base">Carregando condomínios...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 pt-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
             <div className="flex items-center justify-center flex-1">
               <img 
-                src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
+                src="/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png" 
                 alt="Grupo Celdan Facilities" 
-                className="h-16 w-16 rounded-lg shadow-lg"
+                className="h-12 w-12 sm:h-16 sm:w-16 rounded-lg shadow-lg"
               />
-              <h1 className="text-4xl font-bold text-slate-800 ml-4">
+              <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 ml-2 sm:ml-4">
                 Sistema de Vigilância
               </h1>
             </div>
@@ -204,24 +205,24 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
               Sair
             </Button>
           </div>
-          <p className="text-xl text-slate-600 mb-4">
+          <p className="text-lg sm:text-xl text-slate-600 mb-4 px-2">
             Gerencie e selecione o condomínio para acessar o painel administrativo
           </p>
           
           <div className="flex justify-center mb-6">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Condomínio
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[425px] mx-4 max-w-[calc(100vw-2rem)]">
                 <DialogHeader>
-                  <DialogTitle>
+                  <DialogTitle className="text-lg sm:text-xl">
                     {editingCondominium ? 'Editar Condomínio' : 'Novo Condomínio'}
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-sm sm:text-base">
                     {editingCondominium 
                       ? 'Atualize as informações do condomínio' 
                       : 'Preencha as informações do novo condomínio'
@@ -236,11 +237,11 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome *</FormLabel>
+                          <FormLabel className="text-sm sm:text-base">Nome *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Nome do condomínio" {...field} />
+                            <Input placeholder="Nome do condomínio" {...field} className="text-sm sm:text-base" />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-xs sm:text-sm" />
                         </FormItem>
                       )}
                     />
@@ -250,11 +251,11 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                       name="address"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Endereço</FormLabel>
+                          <FormLabel className="text-sm sm:text-base">Endereço</FormLabel>
                           <FormControl>
-                            <Input placeholder="Endereço completo" {...field} />
+                            <Input placeholder="Endereço completo" {...field} className="text-sm sm:text-base" />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-xs sm:text-sm" />
                         </FormItem>
                       )}
                     />
@@ -264,11 +265,11 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefone</FormLabel>
+                          <FormLabel className="text-sm sm:text-base">Telefone</FormLabel>
                           <FormControl>
-                            <Input placeholder="(11) 99999-9999" {...field} />
+                            <Input placeholder="(11) 99999-9999" {...field} className="text-sm sm:text-base" />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-xs sm:text-sm" />
                         </FormItem>
                       )}
                     />
@@ -278,20 +279,20 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="text-sm sm:text-base">Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="contato@condominio.com" {...field} />
+                            <Input placeholder="contato@condominio.com" {...field} className="text-sm sm:text-base" />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-xs sm:text-sm" />
                         </FormItem>
                       )}
                     />
                     
-                    <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={handleDialogClose}>
+                    <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+                      <Button type="button" variant="outline" onClick={handleDialogClose} className="w-full sm:w-auto">
                         Cancelar
                       </Button>
-                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                         {editingCondominium ? 'Atualizar' : 'Criar'}
                       </Button>
                     </div>
@@ -302,23 +303,24 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {condominiums.map((condominium) => (
             <Card 
               key={condominium.id} 
               className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300"
             >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between text-lg">
-                  <div className="flex items-center">
-                    <Building2 className="h-5 w-5 mr-2 text-blue-600" />
-                    {condominium.name}
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                  <div className="flex items-center min-w-0 flex-1">
+                    <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+                    <span className="truncate">{condominium.name}</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0 ml-2">
                     <Button 
                       size="sm" 
                       variant="outline"
                       onClick={() => handleEdit(condominium)}
+                      className="h-8 w-8 p-0"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -326,34 +328,35 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                       size="sm" 
                       variant="outline"
                       onClick={() => handleDelete(condominium)}
+                      className="h-8 w-8 p-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-0">
                 {condominium.address && (
-                  <div className="flex items-start text-sm text-slate-600">
-                    <MapPin className="h-4 w-4 mr-2 mt-0.5 text-slate-400" />
-                    <span>{condominium.address}</span>
+                  <div className="flex items-start text-xs sm:text-sm text-slate-600">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 mt-0.5 text-slate-400 flex-shrink-0" />
+                    <span className="break-words">{condominium.address}</span>
                   </div>
                 )}
                 {condominium.phone && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Phone className="h-4 w-4 mr-2 text-slate-400" />
-                    <span>{condominium.phone}</span>
+                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                    <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-slate-400 flex-shrink-0" />
+                    <span className="break-words">{condominium.phone}</span>
                   </div>
                 )}
                 {condominium.email && (
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Mail className="h-4 w-4 mr-2 text-slate-400" />
-                    <span>{condominium.email}</span>
+                  <div className="flex items-center text-xs sm:text-sm text-slate-600">
+                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-slate-400 flex-shrink-0" />
+                    <span className="break-words">{condominium.email}</span>
                   </div>
                 )}
                 <Button 
                   onClick={() => onSelect(condominium)}
-                  className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                  className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
                 >
                   Acessar Painel
                 </Button>
@@ -362,12 +365,12 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
           ))}
           
           {condominiums.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-600 mb-2">
+            <div className="col-span-full text-center py-8 sm:py-12">
+              <Building2 className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-slate-600 mb-2">
                 Nenhum condomínio cadastrado
               </h3>
-              <p className="text-slate-500 mb-4">
+              <p className="text-sm sm:text-base text-slate-500 mb-4 px-4">
                 Comece criando seu primeiro condomínio
               </p>
             </div>

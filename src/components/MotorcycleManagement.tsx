@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Bike } from 'lucide-react';
+import { Plus, Car } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Motorcycle, Condominium } from '@/types';
 import { toast } from 'sonner';
@@ -55,7 +55,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         if (error) {
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
-              toast.error('Esta placa já está sendo usada por outra motocicleta');
+              toast.error('Esta placa já está sendo usada por outro veículo');
             } else {
               toast.error('Dados duplicados - verifique a placa');
             }
@@ -64,7 +64,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
           
           throw error;
         }
-        toast.success('Motocicleta atualizada com sucesso!');
+        toast.success('Veículo atualizado com sucesso!');
       } else {
         const { error } = await supabase
           .from('motorcycles')
@@ -73,7 +73,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         if (error) {
           if (error.code === '23505') {
             if (error.message.includes('plate')) {
-              toast.error('Esta placa já está sendo usada por outra motocicleta');
+              toast.error('Esta placa já está sendo usada por outro veículo');
             } else {
               toast.error('Dados duplicados - verifique a placa');
             }
@@ -82,7 +82,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
           
           throw error;
         }
-        toast.success('Motocicleta criada com sucesso!');
+        toast.success('Veículo criado com sucesso!');
       }
 
       setDialogOpen(false);
@@ -95,7 +95,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       }, 100);
       
     } catch (error: any) {
-      toast.error('Erro ao salvar motocicleta');
+      toast.error('Erro ao salvar veículo');
     }
   };
 
@@ -113,7 +113,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
   };
 
   const handleDelete = async (motorcycle: Motorcycle) => {
-    if (!confirm(`Tem certeza que deseja excluir a motocicleta "${motorcycle.plate}"?`)) {
+    if (!confirm(`Tem certeza que deseja excluir o veículo "${motorcycle.plate}"?`)) {
       return;
     }
 
@@ -124,7 +124,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
         .eq('id', motorcycle.id);
 
       if (error) throw error;
-      toast.success('Motocicleta excluída com sucesso!');
+      toast.success('Veículo excluído com sucesso!');
       
       // Force update of the parent component
       setTimeout(() => {
@@ -132,7 +132,7 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
       }, 100);
       
     } catch (error: any) {
-      toast.error('Erro ao excluir motocicleta');
+      toast.error('Erro ao excluir veículo');
     }
   };
 
@@ -152,19 +152,19 @@ const MotorcycleManagement = ({ condominium, motorcycles, onUpdate }: Motorcycle
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Bike className="h-5 w-5" />
-              Motocicletas ({motorcycles.length})
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Car className="h-5 w-5" />
+              Veículos ({motorcycles.length})
             </CardTitle>
-            <CardDescription>
-              Gerencie a frota de motocicletas do condomínio
+            <CardDescription className="text-sm sm:text-base">
+              Gerencie a frota de veículos do condomínio
             </CardDescription>
           </div>
-          <Button onClick={handleAddMotorcycle}>
+          <Button onClick={handleAddMotorcycle} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar Motocicleta
+            Adicionar Veículo
           </Button>
         </div>
       </CardHeader>
