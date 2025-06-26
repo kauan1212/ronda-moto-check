@@ -38,20 +38,6 @@ const initApp = () => {
   
   // Register service worker after app loads
   registerSW();
-  
-  // Performance monitoring
-  if (typeof window !== 'undefined') {
-    // Report web vitals
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(console.log);
-      getFID(console.log);
-      getFCP(console.log);
-      getLCP(console.log);
-      getTTFB(console.log);
-    }).catch(() => {
-      // web-vitals not available, continue without metrics
-    });
-  }
 };
 
 // Start the app
