@@ -9,7 +9,266 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      checklists: {
+        Row: {
+          brakes_observation: string | null
+          brakes_status: string | null
+          cleaning_observation: string | null
+          cleaning_status: string | null
+          completed_at: string | null
+          condominium_id: string | null
+          coolant_observation: string | null
+          coolant_status: string | null
+          created_at: string
+          damages: string | null
+          electrical_observation: string | null
+          electrical_status: string | null
+          engine_oil_observation: string | null
+          engine_oil_status: string | null
+          face_photo: string | null
+          fuel_level: number | null
+          fuel_photos: string[] | null
+          general_observations: string | null
+          id: string
+          km_photos: string[] | null
+          leaks_observation: string | null
+          leaks_status: string | null
+          lights_observation: string | null
+          lights_status: string | null
+          motorcycle_id: string
+          motorcycle_km: string | null
+          motorcycle_photos: string[] | null
+          motorcycle_plate: string
+          signature: string | null
+          status: string
+          suspension_observation: string | null
+          suspension_status: string | null
+          tires_observation: string | null
+          tires_status: string | null
+          type: string
+          vigilante_id: string
+          vigilante_name: string
+        }
+        Insert: {
+          brakes_observation?: string | null
+          brakes_status?: string | null
+          cleaning_observation?: string | null
+          cleaning_status?: string | null
+          completed_at?: string | null
+          condominium_id?: string | null
+          coolant_observation?: string | null
+          coolant_status?: string | null
+          created_at?: string
+          damages?: string | null
+          electrical_observation?: string | null
+          electrical_status?: string | null
+          engine_oil_observation?: string | null
+          engine_oil_status?: string | null
+          face_photo?: string | null
+          fuel_level?: number | null
+          fuel_photos?: string[] | null
+          general_observations?: string | null
+          id?: string
+          km_photos?: string[] | null
+          leaks_observation?: string | null
+          leaks_status?: string | null
+          lights_observation?: string | null
+          lights_status?: string | null
+          motorcycle_id: string
+          motorcycle_km?: string | null
+          motorcycle_photos?: string[] | null
+          motorcycle_plate: string
+          signature?: string | null
+          status?: string
+          suspension_observation?: string | null
+          suspension_status?: string | null
+          tires_observation?: string | null
+          tires_status?: string | null
+          type: string
+          vigilante_id: string
+          vigilante_name: string
+        }
+        Update: {
+          brakes_observation?: string | null
+          brakes_status?: string | null
+          cleaning_observation?: string | null
+          cleaning_status?: string | null
+          completed_at?: string | null
+          condominium_id?: string | null
+          coolant_observation?: string | null
+          coolant_status?: string | null
+          created_at?: string
+          damages?: string | null
+          electrical_observation?: string | null
+          electrical_status?: string | null
+          engine_oil_observation?: string | null
+          engine_oil_status?: string | null
+          face_photo?: string | null
+          fuel_level?: number | null
+          fuel_photos?: string[] | null
+          general_observations?: string | null
+          id?: string
+          km_photos?: string[] | null
+          leaks_observation?: string | null
+          leaks_status?: string | null
+          lights_observation?: string | null
+          lights_status?: string | null
+          motorcycle_id?: string
+          motorcycle_km?: string | null
+          motorcycle_photos?: string[] | null
+          motorcycle_plate?: string
+          signature?: string | null
+          status?: string
+          suspension_observation?: string | null
+          suspension_status?: string | null
+          tires_observation?: string | null
+          tires_status?: string | null
+          type?: string
+          vigilante_id?: string
+          vigilante_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklists_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklists_motorcycle_id_fkey"
+            columns: ["motorcycle_id"]
+            isOneToOne: false
+            referencedRelation: "motorcycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklists_vigilante_id_fkey"
+            columns: ["vigilante_id"]
+            isOneToOne: false
+            referencedRelation: "vigilantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      condominiums: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      motorcycles: {
+        Row: {
+          brand: string
+          color: string
+          condominium_id: string | null
+          created_at: string
+          id: string
+          model: string
+          plate: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          brand: string
+          color: string
+          condominium_id?: string | null
+          created_at?: string
+          id?: string
+          model: string
+          plate: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          brand?: string
+          color?: string
+          condominium_id?: string | null
+          created_at?: string
+          id?: string
+          model?: string
+          plate?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "motorcycles_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vigilantes: {
+        Row: {
+          condominium_id: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          registration: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          condominium_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          registration: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          condominium_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          registration?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vigilantes_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
