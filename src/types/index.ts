@@ -1,4 +1,6 @@
 
+import { VehiclePhoto } from './checklist';
+
 export interface User {
   id: string;
   name: string;
@@ -79,6 +81,7 @@ export interface Checklist {
   leaks_observation?: string;
   
   motorcycle_photos: string[];
+  vehicle_photos?: VehiclePhoto[];
   fuel_level: number;
   fuel_photos: string[];
   motorcycle_km: string;
