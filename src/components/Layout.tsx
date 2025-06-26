@@ -28,7 +28,8 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
   const handleLogout = async () => {
     try {
       await signOut();
-      window.location.reload();
+      // Redirecionar para a página de login
+      window.location.href = '/';
     } catch (error) {
       toast.error('Erro ao fazer logout');
     }

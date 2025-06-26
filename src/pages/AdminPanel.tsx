@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Car, CheckSquare, Image } from 'lucide-react';
+import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import VigilanteManagement from '@/components/VigilanteManagement';
 import MotorcycleManagement from '@/components/MotorcycleManagement';
 import ChecklistManagement from '@/components/ChecklistManagement';
 import LogoManagement from '@/components/LogoManagement';
+import UserManagement from '@/components/UserManagement';
 import CondominiumSelector from '@/components/CondominiumSelector';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,7 +113,7 @@ const AdminPanel = () => {
 
       <Tabs defaultValue="condominiums" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto">
-          <TabsList className="grid w-full grid-cols-5 min-w-max">
+          <TabsList className="grid w-full grid-cols-6 min-w-max">
             <TabsTrigger value="condominiums" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
               <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Condomínios</span>
@@ -132,6 +133,11 @@ const AdminPanel = () => {
               <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Checklists</span>
               <span className="sm:hidden">Check.</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <UserCog className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Usuários</span>
+              <span className="sm:hidden">Users</span>
             </TabsTrigger>
             <TabsTrigger value="logo" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
               <Image className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -184,6 +190,10 @@ const AdminPanel = () => {
               Selecione um condomínio para visualizar checklists
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4 sm:space-y-6">
+          <UserManagement />
         </TabsContent>
 
         <TabsContent value="logo" className="space-y-4 sm:space-y-6">
