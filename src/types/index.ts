@@ -1,4 +1,3 @@
-
 import { VehiclePhoto } from './checklist';
 
 export interface User {
@@ -17,6 +16,7 @@ export interface Condominium {
   address?: string;
   phone?: string;
   email?: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
