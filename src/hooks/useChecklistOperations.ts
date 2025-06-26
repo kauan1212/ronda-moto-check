@@ -36,6 +36,9 @@ export const useChecklistOperations = () => {
         return;
       }
 
+      // Convert vehicle_photos to the format expected by the database
+      const vehiclePhotoUrls = formData.vehicle_photos.map(photo => photo.url);
+
       const checklistData = {
         vigilante_id: formData.vigilante_id,
         motorcycle_id: formData.motorcycle_id,
@@ -61,8 +64,7 @@ export const useChecklistOperations = () => {
         cleaning_observation: formData.cleaning_observation || null,
         leaks_status: formData.leaks_status || null,
         leaks_observation: formData.leaks_observation || null,
-        motorcycle_photos: [],
-        vehicle_photos: formData.vehicle_photos,
+        motorcycle_photos: vehiclePhotoUrls,
         fuel_photos: formData.fuel_photos,
         motorcycle_km: formData.motorcycle_km || null,
         km_photos: formData.km_photos,
@@ -113,6 +115,9 @@ export const useChecklistOperations = () => {
       return;
     }
 
+    // Convert vehicle_photos to motorcycle_photos format for PDF generation
+    const vehiclePhotoUrls = formData.vehicle_photos.map(photo => photo.url);
+
     generatePDF({
       ...formData,
       vigilante_name: selectedVigilante.name,
@@ -122,7 +127,8 @@ export const useChecklistOperations = () => {
       completed_at: new Date().toISOString(),
       status: 'completed',
       condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id || '',
-      motorcycle_photos: []
+      motorcycle_photos: vehiclePhotoUrls,
+      vehicle_photos: formData.vehicle_photos
     });
   };
 

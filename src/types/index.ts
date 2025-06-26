@@ -81,7 +81,6 @@ export interface Checklist {
   leaks_observation?: string;
   
   motorcycle_photos: string[];
-  vehicle_photos?: VehiclePhoto[];
   fuel_level: number;
   fuel_photos: string[];
   motorcycle_km: string;
@@ -94,6 +93,9 @@ export interface Checklist {
   status: string;
   created_at: string;
   completed_at?: string;
+  
+  // For PDF generation compatibility with VehiclePhoto types
+  vehicle_photos?: VehiclePhoto[];
 }
 
 export interface AuthContextType {

@@ -22,6 +22,13 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const getCategoryLabel = (url: string, index: number) => {
+  // Try to determine category from the photo order or URL
+  // Since we're working with motorcycle_photos array, we'll use a simple mapping
+  const categories = ['Frente', 'Trás', 'Lateral Esquerda', 'Lateral Direita'];
+  return categories[index % 4] || `Foto ${index + 1}`;
+};
+
 export const generatePDF = (checklistData: Checklist) => {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -58,6 +65,7 @@ export const generatePDF = (checklistData: Checklist) => {
     `Vigilante: ${checklistData.vigilante_name}`,
     `Veículo: ${checklistData.motorcycle_plate}`,
     `Quilometragem: ${checklistData.motorcycle_km || 'Não informado'}`,
+    `Nível de Combustível: ${checklistData.fuel_level}%`,
     `Status: Concluída`
   ];
 
@@ -101,8 +109,8 @@ export const generatePDF = (checklistData: Checklist) => {
     pdf.setFont('helvetica', 'bold');
     pdf.text(item.label, margin, yPos);
     
-    // Status with color
-    pdf.setFontSize(10);
+    // Status with color and larger font
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     const statusText = getStatusLabel(status);
     const statusColor = getStatusColor(status);
@@ -114,16 +122,16 @@ export const generatePDF = (checklistData: Checklist) => {
 
     if (observation) {
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       const splitObservation = pdf.splitTextToSize(`Observação: ${observation}`, pageWidth - 2 * margin);
       pdf.text(splitObservation, margin, yPos);
-      yPos += splitObservation.length * 4;
+      yPos += splitObservation.length * 5;
     }
 
     yPos += 5;
   });
 
-  // Photos section
+  // Photos section - Show actual photos
   if (yPos > pageHeight - 60) {
     pdf.addPage();
     yPos = 20;
@@ -132,139 +140,241 @@ export const generatePDF = (checklistData: Checklist) => {
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'bold');
   pdf.text('REGISTROS FOTOGRÁFICOS', margin, yPos);
-  yPos += 10;
-
-  pdf.setFontSize(11);
-  pdf.setFont('helvetica', 'normal');
-
-  const photoInfo = [
-    `Fotos do Veículo: ${checklistData.vehicle_photos?.length || 0} foto(s)`,
-    `Fotos do Combustível: ${checklistData.fuel_photos?.length || 0} foto(s)`,
-    `Fotos do Odômetro: ${checklistData.km_photos?.length || 0} foto(s)`,
-    `Foto Facial: ${checklistData.face_photo ? '1 foto' : 'Não capturada'}`
-  ];
-
-  photoInfo.forEach(info => {
-    pdf.text(info, margin, yPos);
-    yPos += lineHeight;
-  });
-
-  // Add photos if available
-  let photoYPos = yPos + 10;
-  const photoWidth = 60;
-  const photoHeight = 45;
-  let photosPerRow = 2;
-  let currentPhotoIndex = 0;
+  yPos += 15;
 
   // Vehicle photos
-  if (checklistData.vehicle_photos && checklistData.vehicle_photos.length > 0) {
-    if (photoYPos > pageHeight - 60) {
+  const vehiclePhotos = checklistData.motorcycle_photos || [];
+  if (vehiclePhotos.length > 0) {
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Fotos do Veículo:', margin, yPos);
+    yPos += 10;
+
+    const photoWidth = 70;
+    const photoHeight = 50;
+    const photosPerRow = 2;
+    let currentPhotoIndex = 0;
+
+    vehiclePhotos.forEach((photoUrl: string, index: number) => {
+      if (yPos > pageHeight - 70) {
+        pdf.addPage();
+        yPos = 20;
+        currentPhotoIndex = 0;
+      }
+
+      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 15);
+      
+      try {
+        // Add category label
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(getCategoryLabel(photoUrl, index), xPos, yPos - 2);
+        
+        // Add the actual photo
+        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+        
+      } catch (error) {
+        console.error('Erro ao adicionar foto do veículo:', error);
+        pdf.setFontSize(8);
+        pdf.setTextColor('#ef4444');
+        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
+        pdf.setTextColor('#000000');
+      }
+
+      currentPhotoIndex++;
+      if (currentPhotoIndex % photosPerRow === 0) {
+        yPos += photoHeight + 20;
+      }
+    });
+
+    if (currentPhotoIndex % photosPerRow !== 0) {
+      yPos += photoHeight + 20;
+    }
+  }
+
+  // Fuel photos
+  const fuelPhotos = checklistData.fuel_photos || [];
+  if (fuelPhotos.length > 0) {
+    if (yPos > pageHeight - 70) {
       pdf.addPage();
-      photoYPos = 20;
+      yPos = 20;
     }
 
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Fotos do Veículo:', margin, photoYPos);
-    photoYPos += 10;
+    pdf.text('Fotos do Combustível:', margin, yPos);
+    yPos += 10;
 
-    checklistData.vehicle_photos.forEach((photo: any, index: number) => {
-      if (photoYPos > pageHeight - 60) {
+    const photoWidth = 60;
+    const photoHeight = 45;
+    const photosPerRow = 3;
+    let currentPhotoIndex = 0;
+
+    fuelPhotos.forEach((photoUrl: string) => {
+      if (yPos > pageHeight - 60) {
         pdf.addPage();
-        photoYPos = 20;
+        yPos = 20;
         currentPhotoIndex = 0;
       }
 
       const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
       
       try {
-        pdf.addImage(photo.url, 'JPEG', xPos, photoYPos, photoWidth, photoHeight);
-        
-        // Add category label
-        pdf.setFontSize(8);
-        pdf.text(photo.category === 'front' ? 'Frente' : 
-                photo.category === 'back' ? 'Trás' : 
-                photo.category === 'left' ? 'Esquerda' : 'Direita', 
-                xPos, photoYPos - 2);
+        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
       } catch (error) {
-        console.error('Erro ao adicionar foto:', error);
+        console.error('Erro ao adicionar foto do combustível:', error);
         pdf.setFontSize(8);
-        pdf.text('Erro ao carregar foto', xPos, photoYPos + photoHeight / 2);
+        pdf.setTextColor('#ef4444');
+        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
+        pdf.setTextColor('#000000');
       }
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
-        photoYPos += photoHeight + 15;
+        yPos += photoHeight + 15;
       }
     });
 
     if (currentPhotoIndex % photosPerRow !== 0) {
-      photoYPos += photoHeight + 15;
+      yPos += photoHeight + 15;
+    }
+  }
+
+  // Odometer photos
+  const kmPhotos = checklistData.km_photos || [];
+  if (kmPhotos.length > 0) {
+    if (yPos > pageHeight - 70) {
+      pdf.addPage();
+      yPos = 20;
+    }
+
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Fotos do Odômetro:', margin, yPos);
+    yPos += 10;
+
+    const photoWidth = 60;
+    const photoHeight = 45;
+    const photosPerRow = 3;
+    let currentPhotoIndex = 0;
+
+    kmPhotos.forEach((photoUrl: string) => {
+      if (yPos > pageHeight - 60) {
+        pdf.addPage();
+        yPos = 20;
+        currentPhotoIndex = 0;
+      }
+
+      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
+      
+      try {
+        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
+      } catch (error) {
+        console.error('Erro ao adicionar foto do odômetro:', error);
+        pdf.setFontSize(8);
+        pdf.setTextColor('#ef4444');
+        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
+        pdf.setTextColor('#000000');
+      }
+
+      currentPhotoIndex++;
+      if (currentPhotoIndex % photosPerRow === 0) {
+        yPos += photoHeight + 15;
+      }
+    });
+
+    if (currentPhotoIndex % photosPerRow !== 0) {
+      yPos += photoHeight + 15;
+    }
+  }
+
+  // Face photo
+  if (checklistData.face_photo) {
+    if (yPos > pageHeight - 70) {
+      pdf.addPage();
+      yPos = 20;
+    }
+
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Foto Facial:', margin, yPos);
+    yPos += 10;
+
+    try {
+      pdf.addImage(checklistData.face_photo, 'JPEG', margin, yPos, 60, 45);
+      yPos += 50;
+    } catch (error) {
+      console.error('Erro ao adicionar foto facial:', error);
+      pdf.setFontSize(10);
+      pdf.setTextColor('#ef4444');
+      pdf.text('Erro ao carregar foto facial', margin, yPos);
+      pdf.setTextColor('#000000');
+      yPos += 15;
     }
   }
 
   // Observations
   if (checklistData.general_observations || checklistData.damages) {
-    if (photoYPos > pageHeight - 40) {
+    if (yPos > pageHeight - 40) {
       pdf.addPage();
-      photoYPos = 20;
+      yPos = 20;
     }
 
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('OBSERVAÇÕES', margin, photoYPos);
-    photoYPos += 10;
+    pdf.text('OBSERVAÇÕES', margin, yPos);
+    yPos += 10;
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
 
     if (checklistData.general_observations) {
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Observações Gerais:', margin, photoYPos);
-      photoYPos += lineHeight;
+      pdf.text('Observações Gerais:', margin, yPos);
+      yPos += lineHeight;
       
       pdf.setFont('helvetica', 'normal');
       const splitObservations = pdf.splitTextToSize(checklistData.general_observations, pageWidth - 2 * margin);
-      pdf.text(splitObservations, margin, photoYPos);
-      photoYPos += splitObservations.length * 6 + 5;
+      pdf.text(splitObservations, margin, yPos);
+      yPos += splitObservations.length * 6 + 5;
     }
 
     if (checklistData.damages) {
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Danos Identificados:', margin, photoYPos);
-      photoYPos += lineHeight;
+      pdf.text('Danos Identificados:', margin, yPos);
+      yPos += lineHeight;
       
       pdf.setFont('helvetica', 'normal');
       const splitDamages = pdf.splitTextToSize(checklistData.damages, pageWidth - 2 * margin);
-      pdf.text(splitDamages, margin, photoYPos);
-      photoYPos += splitDamages.length * 6;
+      pdf.text(splitDamages, margin, yPos);
+      yPos += splitDamages.length * 6;
     }
   }
 
   // Signature
   if (checklistData.signature) {
-    if (photoYPos > pageHeight - 60) {
+    if (yPos > pageHeight - 60) {
       pdf.addPage();
-      photoYPos = 20;
+      yPos = 20;
     }
 
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('ASSINATURA', margin, photoYPos);
-    photoYPos += 10;
+    pdf.text('ASSINATURA', margin, yPos);
+    yPos += 10;
 
     try {
-      pdf.addImage(checklistData.signature, 'PNG', margin, photoYPos, 80, 40);
+      pdf.addImage(checklistData.signature, 'PNG', margin, yPos, 80, 40);
     } catch (error) {
       console.error('Erro ao adicionar assinatura:', error);
       pdf.setFontSize(10);
-      pdf.text('Erro ao carregar assinatura', margin, photoYPos);
+      pdf.text('Erro ao carregar assinatura', margin, yPos);
     }
     
-    photoYPos += 45;
+    yPos += 45;
     pdf.setFontSize(10);
-    pdf.text(`Vigilante: ${checklistData.vigilante_name}`, margin, photoYPos);
-    pdf.text(`Data: ${dateStr} às ${timeStr}`, margin, photoYPos + 6);
+    pdf.text(`Vigilante: ${checklistData.vigilante_name}`, margin, yPos);
+    pdf.text(`Data: ${dateStr} às ${timeStr}`, margin, yPos + 6);
   }
 
   // Save the PDF
