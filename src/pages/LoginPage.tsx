@@ -20,11 +20,13 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [success, setSuccess] = useState('');
   
   const { signIn, signUp, user, isAdmin } = useAuth();
 
   useEffect(() => {
     if (user) {
+      console.log('User logged in, redirecting...', { user: user.email, isAdmin });
       onLoginSuccess(isAdmin);
     }
   }, [user, isAdmin, onLoginSuccess]);
@@ -33,20 +35,30 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
+
+    console.log('Starting sign in process...');
 
     try {
-      const { error } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
       
       if (error) {
+        console.error('Sign in error:', error);
+        
         if (error.message.includes('Invalid login credentials')) {
-          setError('Email ou senha incorretos');
+          setError('Email ou senha incorretos. Verifique suas credenciais.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Email ainda não confirmado. Verifique sua caixa de entrada.');
         } else {
-          setError(error.message);
+          setError(`Erro no login: ${error.message}`);
         }
-      } else {
+      } else if (data?.user) {
+        console.log('Sign in successful:', data.user.email);
         toast.success('Login realizado com sucesso!');
+        setSuccess('Login realizado com sucesso! Redirecionando...');
       }
     } catch (err: any) {
+      console.error('Unexpected sign in error:', err);
       setError('Erro inesperado: ' + err.message);
     } finally {
       setLoading(false);
@@ -57,20 +69,39 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
+
+    console.log('Starting sign up process...');
 
     try {
-      const { error } = await signUp(email, password, fullName);
+      const { data, error } = await signUp(email, password, fullName);
       
       if (error) {
+        console.error('Sign up error:', error);
+        
         if (error.message.includes('User already registered')) {
-          setError('Este email já está cadastrado');
+          setError('Este email já está cadastrado. Tente fazer login.');
+        } else if (error.message.includes('Password should be at least')) {
+          setError('A senha deve ter pelo menos 6 caracteres.');
         } else {
-          setError('Erro ao criar conta: ' + error.message);
+          setError(`Erro ao criar conta: ${error.message}`);
         }
-      } else {
-        toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
+      } else if (data?.user) {
+        console.log('Sign up successful:', data.user.email);
+        
+        if (data.user.email_confirmed_at) {
+          // Email já confirmado, fazer login automaticamente
+          toast.success('Conta criada com sucesso!');
+          setSuccess('Conta criada com sucesso! Fazendo login...');
+        } else {
+          // Email precisa ser confirmado
+          toast.success('Conta criada! Verifique seu email para confirmarr.');
+          setSuccess('Conta criada com sucesso! Verifique seu email para confirmar antes de fazer login.');
+          setIsSignUp(false); // Mudar para aba de login
+        }
       }
     } catch (err: any) {
+      console.error('Unexpected sign up error:', err);
       setError('Erro inesperado: ' + err.message);
     } finally {
       setLoading(false);
@@ -108,10 +139,16 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                   </Alert>
                 )}
                 
+                {success && (
+                  <Alert>
+                    <AlertDescription className="text-green-700">{success}</AlertDescription>
+                  </Alert>
+                )}
+                
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="signin-email">Email</Label>
                   <Input
-                    id="email"
+                    id="signin-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -121,9 +158,9 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="signin-password">Senha</Label>
                   <Input
-                    id="password"
+                    id="signin-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -135,7 +172,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={loading}
+                  disabled={loading || !email || !password}
                 >
                   {loading ? 'Entrando...' : 'Entrar'}
                 </Button>
@@ -149,6 +186,12 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
+                
+                {success && (
+                  <Alert>
+                    <AlertDescription className="text-green-700">{success}</AlertDescription>
+                  </Alert>
+                )}
 
                 {email === 'kauankg@hotmail.com' && (
                   <Alert>
@@ -159,9 +202,9 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 )}
                 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Label htmlFor="signup-fullName">Nome Completo</Label>
                   <Input
-                    id="fullName"
+                    id="signup-fullName"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -171,9 +214,9 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="signup-email">Email</Label>
                   <Input
-                    id="email"
+                    id="signup-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -183,9 +226,9 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="signup-password">Senha</Label>
                   <Input
-                    id="password"
+                    id="signup-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -198,7 +241,7 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={loading}
+                  disabled={loading || !email || !password || !fullName}
                 >
                   {loading ? 'Criando...' : 'Criar Conta'}
                 </Button>

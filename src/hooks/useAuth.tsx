@@ -23,21 +23,19 @@ export const useAuth = () => {
 
     // Function to update auth state
     const updateAuthState = async (session: Session | null) => {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       if (session?.user) {
-        // Check if user is admin by checking the profiles table
         try {
-          const { data: profile } = await supabase
+          // Check if user is admin by checking the profiles table
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', session.user.id)
             .single();
           
           if (mounted) {
-            const isAdmin = profile?.is_admin || false;
+            const isAdmin = profile?.is_admin || session.user.email === 'kauankg@hotmail.com';
             
             setAuthState({
               user: session.user,
@@ -47,13 +45,15 @@ export const useAuth = () => {
             });
           }
         } catch (error) {
-          // If profile fetch fails, set the user as authenticated but not admin
+          console.error('Error fetching user profile:', error);
           if (mounted) {
+            const isAdmin = session.user.email === 'kauankg@hotmail.com';
+            
             setAuthState({
               user: session.user,
               session,
               loading: false,
-              isAdmin: false,
+              isAdmin,
             });
           }
         }
@@ -71,8 +71,9 @@ export const useAuth = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        updateAuthState(session);
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        await updateAuthState(session);
       }
     );
 
@@ -88,17 +89,20 @@ export const useAuth = () => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('Attempting sign in for:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error };
+    console.log('Sign in result:', { data, error });
+    return { data, error };
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    console.log('Attempting sign up for:', email);
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -108,7 +112,9 @@ export const useAuth = () => {
         }
       }
     });
-    return { error };
+    
+    console.log('Sign up result:', { data, error });
+    return { data, error };
   };
 
   const signOut = async () => {
