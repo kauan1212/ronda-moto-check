@@ -1,19 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Motorcycle } from '@/types';
 import CameraCapture from './CameraCapture';
 import SignatureCapture from './SignatureCapture';
-import { Camera, Download, Save, User, Bike, Calendar, Clock, X } from 'lucide-react';
+
+// Import all the new components
+import ChecklistHeader from './checklist/ChecklistHeader';
+import PersonnelSelection from './checklist/PersonnelSelection';
+import FacePhotoCapture from './checklist/FacePhotoCapture';
+import InspectionItems from './checklist/InspectionItems';
+import VehiclePhotos from './checklist/VehiclePhotos';
+import FuelSection from './checklist/FuelSection';
+import KilometerSection from './checklist/KilometerSection';
+import ObservationsSection from './checklist/ObservationsSection';
+import SignatureSection from './checklist/SignatureSection';
+import ChecklistActions from './checklist/ChecklistActions';
 
 interface ChecklistFormData {
   vigilante_id: string;
@@ -114,23 +116,27 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     fetchData();
   }, []);
 
+  const updateFormData = (updates: Partial<ChecklistFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
   const handlePhotoCapture = (photo: string, type: 'face' | 'motorcycle' | 'fuel' | 'km') => {
     console.log('Foto capturada para:', type);
     switch (type) {
       case 'face':
-        setFormData(prev => ({ ...prev, face_photo: photo }));
+        updateFormData({ face_photo: photo });
         setShowFaceCamera(false);
         break;
       case 'motorcycle':
-        setFormData(prev => ({ ...prev, motorcycle_photos: [...prev.motorcycle_photos, photo] }));
+        updateFormData({ motorcycle_photos: [...formData.motorcycle_photos, photo] });
         setShowMotorcycleCamera(false);
         break;
       case 'fuel':
-        setFormData(prev => ({ ...prev, fuel_photos: [...prev.fuel_photos, photo] }));
+        updateFormData({ fuel_photos: [...formData.fuel_photos, photo] });
         setShowFuelCamera(false);
         break;
       case 'km':
-        setFormData(prev => ({ ...prev, km_photos: [...prev.km_photos, photo] }));
+        updateFormData({ km_photos: [...formData.km_photos, photo] });
         setShowKmCamera(false);
         break;
     }
@@ -138,21 +144,17 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
   };
 
   const removePhoto = (index: number, type: 'motorcycle' | 'fuel' | 'km') => {
-    setFormData(prev => {
-      const newData = { ...prev };
-      switch (type) {
-        case 'motorcycle':
-          newData.motorcycle_photos = prev.motorcycle_photos.filter((_, i) => i !== index);
-          break;
-        case 'fuel':
-          newData.fuel_photos = prev.fuel_photos.filter((_, i) => i !== index);
-          break;
-        case 'km':
-          newData.km_photos = prev.km_photos.filter((_, i) => i !== index);
-          break;
-      }
-      return newData;
-    });
+    switch (type) {
+      case 'motorcycle':
+        updateFormData({ motorcycle_photos: formData.motorcycle_photos.filter((_, i) => i !== index) });
+        break;
+      case 'fuel':
+        updateFormData({ fuel_photos: formData.fuel_photos.filter((_, i) => i !== index) });
+        break;
+      case 'km':
+        updateFormData({ km_photos: formData.km_photos.filter((_, i) => i !== index) });
+        break;
+    }
     toast.success('Foto removida com sucesso!');
   };
 
@@ -178,7 +180,6 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         return;
       }
 
-      // Convert empty strings to null to avoid constraint violations
       const checklistData = {
         vigilante_id: formData.vigilante_id,
         motorcycle_id: formData.motorcycle_id,
@@ -232,7 +233,6 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       console.log('Checklist salvo com sucesso:', data);
       toast.success('Checklist salvo com sucesso!');
       
-      // Reset form
       setFormData({
         vigilante_id: '',
         motorcycle_id: '',
@@ -556,379 +556,70 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
-          <span className="text-sm text-gray-600">
-            {new Date().toLocaleDateString('pt-BR')}
-          </span>
-          <Clock className="h-5 w-5 text-blue-600 ml-4" />
-          <span className="text-sm text-gray-600">
-            {new Date().toLocaleTimeString('pt-BR')}
-          </span>
-        </div>
-      </div>
+      <ChecklistHeader />
 
-      {/* Seleção do Vigilante e Motocicleta */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Seleção do Vigilante e Motocicleta
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="vigilante">Vigilante</Label>
-              <Select value={formData.vigilante_id} onValueChange={(value) => setFormData({...formData, vigilante_id: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o vigilante" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vigilantes.map((vigilante) => (
-                    <SelectItem key={vigilante.id} value={vigilante.id}>
-                      {vigilante.name} - {vigilante.registration}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <PersonnelSelection
+        vigilantes={vigilantes}
+        motorcycles={motorcycles}
+        vigilanteId={formData.vigilante_id}
+        motorcycleId={formData.motorcycle_id}
+        type={formData.type}
+        onVigilanteChange={(value) => updateFormData({ vigilante_id: value })}
+        onMotorcycleChange={(value) => updateFormData({ motorcycle_id: value })}
+        onTypeChange={(value) => updateFormData({ type: value })}
+      />
 
-            <div>
-              <Label htmlFor="motorcycle">Motocicleta</Label>
-              <Select value={formData.motorcycle_id} onValueChange={(value) => setFormData({...formData, motorcycle_id: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a motocicleta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {motorcycles.map((motorcycle) => (
-                    <SelectItem key={motorcycle.id} value={motorcycle.id}>
-                      {motorcycle.plate} - {motorcycle.brand} {motorcycle.model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <FacePhotoCapture
+        facePhoto={formData.face_photo}
+        onCaptureClick={() => setShowFaceCamera(true)}
+      />
 
-          <div>
-            <Label htmlFor="type">Tipo de Checklist</Label>
-            <Select value={formData.type} onValueChange={(value: 'start' | 'end') => setFormData({...formData, type: value})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="start">Início de Turno</SelectItem>
-                <SelectItem value="end">Fim de Turno</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <InspectionItems
+        formData={formData}
+        onFormDataChange={updateFormData}
+      />
 
-      {/* Foto Facial */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Foto Facial do Vigilante</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Button
-              type="button"
-              onClick={() => setShowFaceCamera(true)}
-              className="flex items-center gap-2"
-            >
-              <Camera className="h-4 w-4" />
-              Capturar Foto Facial
-            </Button>
-            {formData.face_photo && (
-              <div className="text-green-600 text-sm">✓ Foto capturada</div>
-            )}
-          </div>
-          {formData.face_photo && (
-            <div className="mt-4">
-              <img 
-                src={formData.face_photo} 
-                alt="Foto facial" 
-                className="w-32 h-32 object-cover rounded-lg border"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <VehiclePhotos
+        photos={formData.motorcycle_photos}
+        onCaptureClick={() => setShowMotorcycleCamera(true)}
+        onRemovePhoto={(index) => removePhoto(index, 'motorcycle')}
+      />
 
-      {/* Itens de Verificação */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Itens de Verificação da Motocicleta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {[
-            { key: 'tires', label: 'Pneus' },
-            { key: 'brakes', label: 'Freios' },
-            { key: 'engine_oil', label: 'Óleo do Motor' },
-            { key: 'coolant', label: 'Líquido de Arrefecimento' },
-            { key: 'lights', label: 'Sistema de Iluminação' },
-            { key: 'electrical', label: 'Sistema Elétrico' },
-            { key: 'suspension', label: 'Suspensão' },
-            { key: 'cleaning', label: 'Limpeza' },
-            { key: 'leaks', label: 'Vazamentos' }
-          ].map((item) => (
-            <div key={item.key} className="space-y-3 p-4 border rounded-lg">
-              <h4 className="font-medium">{item.label}</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor={`${item.key}_status`}>Status</Label>
-                  <RadioGroup 
-                    value={formData[`${item.key}_status` as keyof ChecklistFormData] as string} 
-                    onValueChange={(value) => setFormData({...formData, [`${item.key}_status`]: value})}
-                    className="flex flex-wrap gap-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="good" id={`${item.key}_good`} />
-                      <Label htmlFor={`${item.key}_good`} className="text-green-600 font-medium">Bom</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="regular" id={`${item.key}_regular`} />
-                      <Label htmlFor={`${item.key}_regular`} className="text-yellow-600 font-medium">Regular</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="needs_repair" id={`${item.key}_repair`} />
-                      <Label htmlFor={`${item.key}_repair`} className="text-red-600 font-medium">Precisa Reparo</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="na" id={`${item.key}_na`} />
-                      <Label htmlFor={`${item.key}_na`} className="text-gray-600 font-medium">N/A</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                <div>
-                  <Label htmlFor={`${item.key}_observation`}>Observação</Label>
-                  <Textarea
-                    value={formData[`${item.key}_observation` as keyof ChecklistFormData] as string}
-                    onChange={(e) => setFormData({...formData, [`${item.key}_observation`]: e.target.value})}
-                    placeholder="Observações sobre este item..."
-                    rows={2}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <FuelSection
+        fuelLevel={formData.fuel_level}
+        fuelPhotos={formData.fuel_photos}
+        onFuelLevelChange={(value) => updateFormData({ fuel_level: value })}
+        onCaptureClick={() => setShowFuelCamera(true)}
+        onRemovePhoto={(index) => removePhoto(index, 'fuel')}
+      />
 
-      {/* Fotos da Motocicleta */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fotos da Motocicleta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            type="button"
-            onClick={() => setShowMotorcycleCamera(true)}
-            className="flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            Adicionar Foto da Motocicleta
-          </Button>
-          
-          {formData.motorcycle_photos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formData.motorcycle_photos.map((photo, index) => (
-                <div key={index} className="relative">
-                  <img 
-                    src={photo} 
-                    alt={`Motocicleta ${index + 1}`} 
-                    className="w-full h-24 object-cover rounded-lg border"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => removePhoto(index, 'motorcycle')}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <KilometerSection
+        motorcycleKm={formData.motorcycle_km}
+        kmPhotos={formData.km_photos}
+        onKmChange={(value) => updateFormData({ motorcycle_km: value })}
+        onCaptureClick={() => setShowKmCamera(true)}
+        onRemovePhoto={(index) => removePhoto(index, 'km')}
+      />
 
-      {/* Combustível */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Combustível</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="fuel_level">Nível de Combustível (%)</Label>
-            <Input
-              type="number"
-              value={formData.fuel_level}
-              onChange={(e) => setFormData({...formData, fuel_level: parseInt(e.target.value) || 0})}
-              min="0"
-              max="100"
-              placeholder="Nível em porcentagem"
-            />
-          </div>
-          
-          <Button
-            type="button"
-            onClick={() => setShowFuelCamera(true)}
-            className="flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            Foto do Combustível
-          </Button>
-          
-          {formData.fuel_photos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formData.fuel_photos.map((photo, index) => (
-                <div key={index} className="relative">
-                  <img 
-                    src={photo} 
-                    alt={`Combustível ${index + 1}`} 
-                    className="w-full h-24 object-cover rounded-lg border"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => removePhoto(index, 'fuel')}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <ObservationsSection
+        generalObservations={formData.general_observations}
+        damages={formData.damages}
+        onGeneralObservationsChange={(value) => updateFormData({ general_observations: value })}
+        onDamagesChange={(value) => updateFormData({ damages: value })}
+      />
 
-      {/* Quilometragem */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quilometragem</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="motorcycle_km">Quilometragem Atual</Label>
-            <Input
-              type="text"
-              value={formData.motorcycle_km}
-              onChange={(e) => setFormData({...formData, motorcycle_km: e.target.value})}
-              placeholder="Ex: 12.345 km"
-            />
-          </div>
-          
-          <Button
-            type="button"
-            onClick={() => setShowKmCamera(true)}
-            className="flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            Foto do Odômetro
-          </Button>
-          
-          {formData.km_photos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formData.km_photos.map((photo, index) => (
-                <div key={index} className="relative">
-                  <img 
-                    src={photo} 
-                    alt={`Odômetro ${index + 1}`} 
-                    className="w-full h-24 object-cover rounded-lg border"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => removePhoto(index, 'km')}
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 hover:bg-red-600 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <SignatureSection
+        signature={formData.signature}
+        onCaptureClick={() => setShowSignature(true)}
+      />
 
-      {/* Observações Gerais */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Observações Gerais e Danos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="general_observations">Observações Gerais</Label>
-            <Textarea
-              value={formData.general_observations}
-              onChange={(e) => setFormData({...formData, general_observations: e.target.value})}
-              placeholder="Observações gerais sobre a vistoria..."
-              rows={4}
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="damages">Danos ou Problemas Identificados</Label>
-            <Textarea
-              value={formData.damages}
-              onChange={(e) => setFormData({...formData, damages: e.target.value})}
-              placeholder="Descreva qualquer dano ou problema encontrado..."
-              rows={4}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Assinatura */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Assinatura do Vigilante</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            type="button"
-            onClick={() => setShowSignature(true)}
-            className="flex items-center gap-2"
-          >
-            Adicionar Assinatura
-          </Button>
-          
-          {formData.signature && (
-            <div className="mt-4">
-              <img 
-                src={formData.signature} 
-                alt="Assinatura" 
-                className="w-64 h-32 object-contain border rounded-lg bg-white"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Botões de Ação */}
-      <div className="flex gap-4 pt-6">
-        <Button 
-          onClick={handleSave} 
-          className="flex-1 flex items-center gap-2"
-          disabled={!formData.vigilante_id || !formData.motorcycle_id || !formData.signature || isSaving}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? 'Salvando...' : 'Salvar Checklist'}
-        </Button>
-        
-        <Button 
-          onClick={generatePDF} 
-          variant="outline" 
-          className="flex items-center gap-2"
-          disabled={!formData.vigilante_id || !formData.motorcycle_id}
-        >
-          <Download className="h-4 w-4" />
-          Download PDF
-        </Button>
-      </div>
+      <ChecklistActions
+        onSave={handleSave}
+        onGeneratePDF={generatePDF}
+        isSaving={isSaving}
+        canSave={!!(formData.vigilante_id && formData.motorcycle_id && formData.signature)}
+        canGeneratePDF={!!(formData.vigilante_id && formData.motorcycle_id)}
+      />
 
       {/* Câmeras e Assinatura */}
       {showFaceCamera && (
@@ -966,7 +657,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
       {showSignature && (
         <SignatureCapture
           onCapture={(signature) => {
-            setFormData({...formData, signature});
+            updateFormData({ signature });
             setShowSignature(false);
           }}
           onCancel={() => setShowSignature(false)}
