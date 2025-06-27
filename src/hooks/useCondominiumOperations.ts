@@ -25,6 +25,9 @@ export const useCondominiumOperations = () => {
     try {
       console.log('Fetching condominiums for user:', user.id, user.email);
       
+      // Adicionar um pequeno delay para garantir que a sessão esteja completamente estabelecida
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
@@ -37,7 +40,7 @@ export const useCondominiumOperations = () => {
         return [];
       }
 
-      console.log('Fetched condominiums:', data?.length || 0, 'for user:', user.id);
+      console.log('Fetched condominiums:', data?.length || 0, 'items for user:', user.id);
       return data || [];
     } catch (error) {
       console.error('Unexpected error fetching condominiums:', error);
@@ -131,7 +134,7 @@ export const useCondominiumOperations = () => {
   };
 
   return {
-    loading: loading || authLoading, // Combinar loading states
+    loading: loading || authLoading,
     fetchCondominiums,
     saveCondominium,
     deleteCondominium,

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
@@ -27,6 +26,10 @@ const AdminPanel = () => {
       }
       
       console.log('Fetching condominiums for user:', user.id);
+      
+      // Adicionar um pequeno delay para garantir que a sessão esteja completamente estabelecida
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
@@ -41,11 +44,19 @@ const AdminPanel = () => {
       console.log('Fetched condominiums:', data?.length);
       return data as Condominium[];
     },
-    enabled: !!user?.id && !authLoading, // Aguardar auth carregar completamente
+    enabled: !!user?.id && !authLoading,
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
+
+  // Forçar refetch quando o usuário muda
+  useEffect(() => {
+    if (user?.id && !authLoading) {
+      console.log('User changed in AdminPanel, refetching condominiums');
+      refetchCondominiums();
+    }
+  }, [user?.id, authLoading, refetchCondominiums]);
 
   const { data: vigilantes = [], refetch: refetchVigilantes } = useQuery({
     queryKey: ['vigilantes', selectedCondominiumId],

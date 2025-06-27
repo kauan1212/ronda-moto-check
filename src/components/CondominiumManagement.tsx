@@ -18,12 +18,14 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const loadCondominiums = async () => {
     console.log('Loading condominiums...');
     const data = await fetchCondominiums();
     console.log('Loaded condominiums:', data.length);
     setCondominiums(data);
+    setIsInitialLoad(false);
   };
 
   // Aguardar auth carregar completamente antes de buscar dados
@@ -38,9 +40,18 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       } else {
         console.log('No user after auth loading, clearing condominiums');
         setCondominiums([]);
+        setIsInitialLoad(false);
       }
     }
-  }, [authLoading, user?.id]); // Incluir authLoading nas dependências
+  }, [authLoading, user?.id]);
+
+  // Forçar recarregamento quando o usuário muda (login/logout)
+  useEffect(() => {
+    if (user?.id && !authLoading && !isInitialLoad) {
+      console.log('User changed, reloading condominiums for:', user.id);
+      loadCondominiums();
+    }
+  }, [user?.id]);
 
   const handleSubmit = async (values: any) => {
     const success = await saveCondominium(values, editingCondominium);
@@ -81,14 +92,14 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }
   };
 
-  // Mostrar loading enquanto auth ou condominiums estão carregando
-  if (authLoading || condominiumLoading) {
+  // Mostrar loading enquanto auth ou condominiums estão carregando OU durante carregamento inicial
+  if (authLoading || (condominiumLoading && isInitialLoad)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600 text-sm sm:text-base">
-            {authLoading ? 'Carregando autenticação...' : 'Carregando condomínios...'}
+            {authLoading ? 'Verificando autenticação...' : 'Carregando condomínios...'}
           </p>
         </div>
       </div>
@@ -111,7 +122,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
             />
           ))}
           
-          {condominiums.length === 0 && <CondominiumEmptyState />}
+          {condominiums.length === 0 && !isInitialLoad && <CondominiumEmptyState />}
         </div>
 
         <CondominiumDialog
