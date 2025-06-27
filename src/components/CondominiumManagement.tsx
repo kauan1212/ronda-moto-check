@@ -25,10 +25,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     const data = await fetchCondominiums();
     console.log('📋 Setting condominiums state with:', data.length, 'items');
     setCondominiums(data);
-    
-    setTimeout(() => {
-      console.log('🎯 Condominiums state updated, current length:', data.length);
-    }, 100);
   };
 
   const handleRefresh = async () => {
@@ -36,45 +32,28 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     const data = await refreshCondominiums();
     console.log('📋 Refreshed condominiums, setting state with:', data.length, 'items');
     setCondominiums(data);
-    
-    setTimeout(() => {
-      console.log('🎯 Condominiums refreshed, current length:', data.length);
-    }, 100);
   };
 
-  // Unified effect: Handle auth state and auto-refresh
+  // Auto-refresh effect: Executes once when component mounts and user is ready
   useEffect(() => {
-    const handleAuthChange = async () => {
-      console.log('🔍 [Effect] Checking auth state:', { authLoading, userId: user?.id, hasAutoRefreshed: hasAutoRefreshed.current });
-
-      if (!authLoading && user?.id) {
-        console.log('✅ Auth is ready. User logged in:', user.id);
+    const performAutoRefresh = async () => {
+      if (!authLoading && user?.id && !hasAutoRefreshed.current) {
+        console.log('🔄 Auto-refresh triggered - Component mounted with authenticated user');
+        hasAutoRefreshed.current = true;
         
-        // Auto-refresh only once when user first logs in
-        if (!hasAutoRefreshed.current) {
-          console.log('🔄 Auto refresh triggered on login...');
-          hasAutoRefreshed.current = true;
-          
-          // Use a small delay to ensure auth is fully settled
-          setTimeout(async () => {
-            console.log('🔄 Executing auto-refresh...');
-            await handleRefresh();
-          }, 200);
-        } else {
-          // Just load normally if already auto-refreshed
-          console.log('🔄 Loading condominiums normally...');
-          await loadCondominiums();
-        }
-      }
-
-      if (!authLoading && !user?.id) {
-        console.log('🚫 No user. Clearing condominiums...');
+        // Small delay to ensure auth is fully settled
+        setTimeout(async () => {
+          console.log('🔄 Executing automatic refresh...');
+          await handleRefresh();
+        }, 100);
+      } else if (!authLoading && !user?.id) {
+        console.log('🚫 No user found, clearing condominiums...');
         setCondominiums([]);
-        hasAutoRefreshed.current = false; // Reset auto-refresh flag when user logs out
+        hasAutoRefreshed.current = false;
       }
     };
 
-    handleAuthChange();
+    performAutoRefresh();
   }, [authLoading, user?.id]);
 
   // Debug effect: Monitor state changes
