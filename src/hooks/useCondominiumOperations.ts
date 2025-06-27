@@ -48,6 +48,11 @@ export const useCondominiumOperations = () => {
     }
   };
 
+  const refreshCondominiums = async (): Promise<Condominium[]> => {
+    console.log('🔄 Refreshing condominiums...');
+    return await fetchCondominiums();
+  };
+
   const saveCondominium = async (values: any, editingCondominium: Condominium | null) => {
     try {
       if (!user) {
@@ -134,6 +139,7 @@ export const useCondominiumOperations = () => {
     loading,
     authLoading,
     fetchCondominiums,
+    refreshCondominiums,
     saveCondominium,
     deleteCondominium,
   };

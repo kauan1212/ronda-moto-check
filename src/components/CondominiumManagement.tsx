@@ -14,7 +14,7 @@ interface CondominiumManagementProps {
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: condominiumLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
+  const { loading: condominiumLoading, fetchCondominiums, refreshCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
@@ -27,6 +27,17 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     
     setTimeout(() => {
       console.log('🎯 Condominiums state updated, current length:', data.length);
+    }, 100);
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh triggered...');
+    const data = await refreshCondominiums();
+    console.log('📋 Refreshed condominiums, setting state with:', data.length, 'items');
+    setCondominiums(data);
+    
+    setTimeout(() => {
+      console.log('🎯 Condominiums refreshed, current length:', data.length);
     }, 100);
   };
 
@@ -47,6 +58,27 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     };
 
     run();
+  }, [authLoading, user?.id]);
+
+  // Auto-refresh effect: Refresh condominiums when user logs in
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout;
+
+    if (!authLoading && user?.id && condominiums.length === 0) {
+      console.log('🔄 Auto-refresh: User just logged in, scheduling refresh...');
+      
+      // Schedule a refresh after a short delay to ensure auth is fully settled
+      refreshTimeout = setTimeout(() => {
+        console.log('🔄 Auto-refresh: Executing scheduled refresh...');
+        handleRefresh();
+      }, 500);
+    }
+
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
   }, [authLoading, user?.id]);
 
   // Debug effect: Monitor state changes
@@ -112,7 +144,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <CondominiumHeader onAddClick={handleAddClick} />
+        <CondominiumHeader onAddClick={handleAddClick} onRefresh={handleRefresh} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {condominiums.map((condominium) => {
