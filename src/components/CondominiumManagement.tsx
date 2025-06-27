@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +20,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
 
-  // Auto-refresh simplificado baseado no exemplo fornecido
+  // Auto-refresh que executa apenas uma vez ao acessar a página
   useEffect(() => {
     const loadCondominiums = async () => {
       if (!user?.id) {
@@ -42,7 +43,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     if (!authLoading && user?.id) {
       loadCondominiums();
     }
-  }, [authLoading, user?.id, fetchCondominiums]);
+  }, [authLoading, user?.id]); // Removido fetchCondominiums das dependências
 
   const handleRefresh = async () => {
     console.log('🔄 Refresh manual acionado...');
@@ -149,3 +150,4 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 };
 
 export default CondominiumManagement;
+
