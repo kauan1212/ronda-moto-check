@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium } from '@/types';
@@ -10,23 +9,20 @@ export const useCondominiumOperations = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchCondominiums = async (): Promise<Condominium[]> => {
-    // Aguardar que auth termine de carregar antes de buscar dados
+    // Don't fetch if auth is still loading
     if (authLoading) {
-      console.log('Auth still loading, waiting...');
+      console.log('Auth still loading, skipping fetch');
       return [];
     }
 
     if (!user?.id) {
-      console.log('No user found, skipping fetch');
+      console.log('No user found, returning empty array');
       return [];
     }
 
     setLoading(true);
     try {
       console.log('Fetching condominiums for user:', user.id, user.email);
-      
-      // Adicionar um pequeno delay para garantir que a sessão esteja completamente estabelecida
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       const { data, error } = await supabase
         .from('condominiums')
@@ -40,7 +36,8 @@ export const useCondominiumOperations = () => {
         return [];
       }
 
-      console.log('Fetched condominiums:', data?.length || 0, 'items for user:', user.id);
+      console.log('✅ Successfully fetched condominiums:', data?.length || 0, 'items');
+      console.log('Condominium data:', data);
       return data || [];
     } catch (error) {
       console.error('Unexpected error fetching condominiums:', error);
@@ -134,7 +131,8 @@ export const useCondominiumOperations = () => {
   };
 
   return {
-    loading: loading || authLoading,
+    loading,
+    authLoading,
     fetchCondominiums,
     saveCondominium,
     deleteCondominium,

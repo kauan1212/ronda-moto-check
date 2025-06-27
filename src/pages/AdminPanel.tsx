@@ -21,14 +21,11 @@ const AdminPanel = () => {
     queryKey: ['condominiums', user?.id],
     queryFn: async () => {
       if (!user?.id) {
-        console.log('No user found, skipping condominiums fetch');
+        console.log('AdminPanel: No user found, skipping condominiums fetch');
         return [];
       }
       
-      console.log('Fetching condominiums for user:', user.id);
-      
-      // Adicionar um pequeno delay para garantir que a sessão esteja completamente estabelecida
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('AdminPanel: Fetching condominiums for user:', user.id);
       
       const { data, error } = await supabase
         .from('condominiums')
@@ -37,11 +34,11 @@ const AdminPanel = () => {
         .order('name');
       
       if (error) {
-        console.error('Error fetching condominiums:', error);
+        console.error('AdminPanel: Error fetching condominiums:', error);
         throw error;
       }
       
-      console.log('Fetched condominiums:', data?.length);
+      console.log('AdminPanel: Fetched condominiums:', data?.length);
       return data as Condominium[];
     },
     enabled: !!user?.id && !authLoading,
@@ -50,10 +47,10 @@ const AdminPanel = () => {
     refetchOnWindowFocus: true
   });
 
-  // Forçar refetch quando o usuário muda
+  // Force refetch when user changes
   useEffect(() => {
     if (user?.id && !authLoading) {
-      console.log('User changed in AdminPanel, refetching condominiums');
+      console.log('AdminPanel: User changed, refetching condominiums for:', user.id);
       refetchCondominiums();
     }
   }, [user?.id, authLoading, refetchCondominiums]);
@@ -118,11 +115,12 @@ const AdminPanel = () => {
   };
 
   const handleCondominiumSelect = (condominium: Condominium) => {
-    // Verificar se o condomínio pertence ao usuário atual
+    // Verify condominium belongs to current user
     if (condominium.user_id !== user?.id) {
-      console.warn('Attempted to select condominium not owned by user');
+      console.warn('AdminPanel: Attempted to select condominium not owned by user');
       return;
     }
+    console.log('AdminPanel: Selected condominium:', condominium.name);
     setSelectedCondominiumId(condominium.id);
   };
 

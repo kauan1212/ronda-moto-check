@@ -14,51 +14,48 @@ interface CondominiumManagementProps {
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: condominiumLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
+  const { loading: condominiumLoading, authLoading: hookAuthLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const loadCondominiums = async () => {
-    console.log('Loading condominiums...');
+    console.log('🔄 Loading condominiums...');
     const data = await fetchCondominiums();
-    console.log('Loaded condominiums:', data.length);
+    console.log('📋 Setting condominiums state with:', data.length, 'items');
     setCondominiums(data);
-    setIsInitialLoad(false);
+    
+    // Force a re-render by logging the state change
+    setTimeout(() => {
+      console.log('🎯 Condominiums state updated, current length:', data.length);
+    }, 100);
   };
 
-  // Aguardar auth carregar completamente antes de buscar dados
+  // Main effect: Load data when user is authenticated and ready
   useEffect(() => {
-    console.log('CondominiumManagement useEffect triggered, authLoading:', authLoading, 'user:', user?.id);
+    console.log('🔍 Main useEffect triggered - authLoading:', authLoading, 'user:', user?.id);
     
-    // Só buscar dados quando auth não estiver carregando
-    if (!authLoading) {
-      if (user?.id) {
-        console.log('Auth loaded, fetching condominiums for user:', user.id);
-        loadCondominiums();
-      } else {
-        console.log('No user after auth loading, clearing condominiums');
-        setCondominiums([]);
-        setIsInitialLoad(false);
-      }
+    if (!authLoading && user?.id) {
+      console.log('✅ Auth ready, loading condominiums for user:', user.id);
+      loadCondominiums();
+    } else if (!authLoading && !user?.id) {
+      console.log('❌ No user after auth loading, clearing condominiums');
+      setCondominiums([]);
     }
   }, [authLoading, user?.id]);
 
-  // Forçar recarregamento quando o usuário muda (login/logout)
+  // Debug effect: Monitor state changes
   useEffect(() => {
-    if (user?.id && !authLoading && !isInitialLoad) {
-      console.log('User changed, reloading condominiums for:', user.id);
-      loadCondominiums();
-    }
-  }, [user?.id]);
+    console.log('📊 State Debug - condominiums.length:', condominiums.length);
+    console.log('📊 Current condominiums:', condominiums.map(c => ({ id: c.id, name: c.name })));
+  }, [condominiums]);
 
   const handleSubmit = async (values: any) => {
     const success = await saveCondominium(values, editingCondominium);
     if (success) {
       setEditingCondominium(null);
       setDialogOpen(false);
-      // Recarregar a lista após salvar
+      // Reload condominiums after saving
       await loadCondominiums();
     }
     return success;
@@ -75,7 +72,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const handleDelete = async (condominium: Condominium) => {
     const success = await deleteCondominium(condominium);
     if (success) {
-      // Recarregar a lista após deletar
+      // Reload condominiums after deleting
       await loadCondominiums();
     }
   };
@@ -92,8 +89,10 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }
   };
 
-  // Mostrar loading enquanto auth ou condominiums estão carregando OU durante carregamento inicial
-  if (authLoading || (condominiumLoading && isInitialLoad)) {
+  // Show loading only when auth is loading OR when we're actively fetching condominiums
+  const isLoading = authLoading || (condominiumLoading && condominiums.length === 0);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4">
         <div className="text-center">
@@ -106,23 +105,30 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     );
   }
 
+  console.log('🎨 Rendering CondominiumManagement with', condominiums.length, 'condominiums');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
         <CondominiumHeader onAddClick={handleAddClick} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {condominiums.map((condominium) => (
-            <CondominiumCard
-              key={condominium.id}
-              condominium={condominium}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onSelect={onSelect}
-            />
-          ))}
+          {condominiums.map((condominium) => {
+            console.log('🏢 Rendering condominium card:', condominium.name);
+            return (
+              <CondominiumCard
+                key={condominium.id}
+                condominium={condominium}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSelect={onSelect}
+              />
+            );
+          })}
           
-          {condominiums.length === 0 && !isInitialLoad && <CondominiumEmptyState />}
+          {condominiums.length === 0 && (
+            <CondominiumEmptyState />
+          )}
         </div>
 
         <CondominiumDialog
