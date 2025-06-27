@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,14 +19,9 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
 
-  // Auto-refresh simplificado - carrega sempre que o componente monta
+  // Auto-refresh simplificado baseado no exemplo fornecido
   useEffect(() => {
     const loadCondominiums = async () => {
-      if (authLoading) {
-        console.log('⏳ Auth ainda carregando, aguardando...');
-        return;
-      }
-
       if (!user?.id) {
         console.log('🚫 Usuário não encontrado, limpando condomínios...');
         setCondominiums([]);
@@ -42,7 +38,10 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       }
     };
 
-    loadCondominiums(); // Executa uma vez ao montar o componente
+    // Só executa o carregamento se não estiver mais carregando auth e tiver usuário
+    if (!authLoading && user?.id) {
+      loadCondominiums();
+    }
   }, [authLoading, user?.id, fetchCondominiums]);
 
   const handleRefresh = async () => {
@@ -79,7 +78,9 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const handleDelete = async (condominium: Condominium) => {
     const success = await deleteCondominium(condominium);
     if (success) {
-      await loadCondominiums();
+      // Recarrega a lista após deletar
+      const data = await fetchCondominiums();
+      setCondominiums(data);
     }
   };
 
