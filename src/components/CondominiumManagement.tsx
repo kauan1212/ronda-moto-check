@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useCondominiumOperations } from '@/hooks/useCondominiumOperations';
@@ -18,6 +17,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
+  const hasAutoRefreshed = useRef(false);
 
   const loadCondominiums = async () => {
     console.log('🔄 Loading condominiums...');
@@ -41,6 +41,19 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }, 100);
   };
 
+  // Auto-refresh once when user logs in
+  useEffect(() => {
+    const performAutoRefresh = async () => {
+      if (!authLoading && user?.id && !hasAutoRefreshed.current) {
+        console.log('🔄 Auto refresh triggered on login...');
+        hasAutoRefreshed.current = true;
+        await handleRefresh();
+      }
+    };
+
+    performAutoRefresh();
+  }, [authLoading, user?.id]);
+
   // Main effect: Load data when user is authenticated and ready
   useEffect(() => {
     const run = async () => {
@@ -54,31 +67,11 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       if (!authLoading && !user?.id) {
         console.log('🚫 No user. Clearing condominiums...');
         setCondominiums([]);
+        hasAutoRefreshed.current = false; // Reset auto-refresh flag when user logs out
       }
     };
 
     run();
-  }, [authLoading, user?.id]);
-
-  // Auto-refresh effect: Refresh condominiums when user logs in
-  useEffect(() => {
-    let refreshTimeout: NodeJS.Timeout;
-
-    if (!authLoading && user?.id && condominiums.length === 0) {
-      console.log('🔄 Auto-refresh: User just logged in, scheduling refresh...');
-      
-      // Schedule a refresh after a short delay to ensure auth is fully settled
-      refreshTimeout = setTimeout(() => {
-        console.log('🔄 Auto-refresh: Executing scheduled refresh...');
-        handleRefresh();
-      }, 500);
-    }
-
-    return () => {
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-    };
   }, [authLoading, user?.id]);
 
   // Debug effect: Monitor state changes
