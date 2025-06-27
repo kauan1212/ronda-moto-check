@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,27 +42,29 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }, 100);
   };
 
-  // Auto-refresh once when user logs in
+  // Unified effect: Handle auth state and auto-refresh
   useEffect(() => {
-    const performAutoRefresh = async () => {
-      if (!authLoading && user?.id && !hasAutoRefreshed.current) {
-        console.log('🔄 Auto refresh triggered on login...');
-        hasAutoRefreshed.current = true;
-        await handleRefresh();
-      }
-    };
-
-    performAutoRefresh();
-  }, [authLoading, user?.id]);
-
-  // Main effect: Load data when user is authenticated and ready
-  useEffect(() => {
-    const run = async () => {
-      console.log('🔍 [Effect] Checking auth state:', { authLoading, userId: user?.id });
+    const handleAuthChange = async () => {
+      console.log('🔍 [Effect] Checking auth state:', { authLoading, userId: user?.id, hasAutoRefreshed: hasAutoRefreshed.current });
 
       if (!authLoading && user?.id) {
-        console.log('✅ Auth is ready. Fetching condominiums...');
-        await loadCondominiums();
+        console.log('✅ Auth is ready. User logged in:', user.id);
+        
+        // Auto-refresh only once when user first logs in
+        if (!hasAutoRefreshed.current) {
+          console.log('🔄 Auto refresh triggered on login...');
+          hasAutoRefreshed.current = true;
+          
+          // Use a small delay to ensure auth is fully settled
+          setTimeout(async () => {
+            console.log('🔄 Executing auto-refresh...');
+            await handleRefresh();
+          }, 200);
+        } else {
+          // Just load normally if already auto-refreshed
+          console.log('🔄 Loading condominiums normally...');
+          await loadCondominiums();
+        }
       }
 
       if (!authLoading && !user?.id) {
@@ -71,7 +74,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       }
     };
 
-    run();
+    handleAuthChange();
   }, [authLoading, user?.id]);
 
   // Debug effect: Monitor state changes

@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const LogoManagement = () => {
-  const [logoUrl, setLogoUrl] = useState<string>('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
+  const [logoUrl, setLogoUrl] = useState<string>('/lovable-uploads/58e9a05f-630d-4258-b9fa-3d590648ad6c.png');
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +40,7 @@ const LogoManagement = () => {
         setLogoUrl(data.logo_url);
       } else {
         // Use default logo if no custom logo is set
-        setLogoUrl('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
+        setLogoUrl('/lovable-uploads/58e9a05f-630d-4258-b9fa-3d590648ad6c.png');
       }
     } catch (error) {
       console.error('Erro ao carregar logo:', error);
@@ -109,7 +109,7 @@ const LogoManagement = () => {
         return;
       }
 
-      setLogoUrl('/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png');
+      setLogoUrl('/lovable-uploads/58e9a05f-630d-4258-b9fa-3d590648ad6c.png');
       toast.success('Logo removida com sucesso!');
     } catch (error) {
       console.error('Erro ao remover logo:', error);
@@ -165,7 +165,7 @@ const LogoManagement = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 {uploading ? 'Enviando...' : 'Alterar Logo'}
               </Button>
-              {logoUrl !== '/lovable-uploads/2c80dbd7-a4ae-44cb-ad84-3b14b0d68244.png' && (
+              {logoUrl !== '/lovable-uploads/58e9a05f-630d-4258-b9fa-3d590648ad6c.png' && (
                 <Button
                   variant="destructive"
                   onClick={removeLogo}
