@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
@@ -21,7 +20,7 @@ const AdminPanel = () => {
   const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
     queryKey: ['condominiums', user?.id],
     queryFn: async () => {
-      if (!user) {
+      if (!user?.id) {
         console.log('No user found, skipping condominiums fetch');
         return [];
       }
@@ -30,7 +29,7 @@ const AdminPanel = () => {
       const { data, error } = await supabase
         .from('condominiums')
         .select('*')
-        .eq('user_id', user.id) // Garantir filtro por user_id
+        .eq('user_id', user.id)
         .order('name');
       
       if (error) {
@@ -41,9 +40,10 @@ const AdminPanel = () => {
       console.log('Fetched condominiums:', data?.length);
       return data as Condominium[];
     },
-    enabled: !!user?.id, // Mudança importante: dependência mais específica
-    staleTime: 0, // Garante que os dados sejam sempre atualizados
-    refetchOnMount: true // Garante refetch ao montar o componente
+    enabled: !!user?.id,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const { data: vigilantes = [], refetch: refetchVigilantes } = useQuery({

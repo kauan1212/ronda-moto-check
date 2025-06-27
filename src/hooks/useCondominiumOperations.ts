@@ -7,16 +7,16 @@ import { useAuth } from '@/hooks/useAuth';
 
 export const useCondominiumOperations = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchCondominiums = async (): Promise<Condominium[]> => {
-    try {
-      if (!user) {
-        console.log('No user found, skipping fetch');
-        setLoading(false);
-        return [];
-      }
+    if (!user) {
+      console.log('No user found, skipping fetch');
+      return [];
+    }
 
+    setLoading(true);
+    try {
       console.log('Fetching condominiums for user:', user.id, user.email);
       
       const { data, error } = await supabase

@@ -20,13 +20,16 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
 
   const loadCondominiums = async () => {
+    console.log('Loading condominiums...');
     const data = await fetchCondominiums();
+    console.log('Loaded condominiums:', data.length);
     setCondominiums(data);
   };
 
+  // Carregar condomínios sempre que o usuário mudar ou componente montar
   useEffect(() => {
-    if (user) {
-      console.log('User changed, fetching condominiums for:', user.id);
+    console.log('CondominiumManagement useEffect triggered, user:', user?.id);
+    if (user?.id) {
       loadCondominiums();
     } else {
       console.log('No user, clearing condominiums');
@@ -38,6 +41,8 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     const success = await saveCondominium(values, editingCondominium);
     if (success) {
       setEditingCondominium(null);
+      setDialogOpen(false);
+      // Recarregar a lista após salvar
       await loadCondominiums();
     }
     return success;
@@ -54,6 +59,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const handleDelete = async (condominium: Condominium) => {
     const success = await deleteCondominium(condominium);
     if (success) {
+      // Recarregar a lista após deletar
       await loadCondominiums();
     }
   };
