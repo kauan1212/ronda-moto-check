@@ -102,6 +102,13 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
     }
   }, [selectedCondominium.id]);
 
+  const handleRefresh = useCallback(async () => {
+    console.log('Manual refresh triggered from Dashboard...');
+    toast.info('Atualizando dados...');
+    await fetchData();
+    toast.success('Dados atualizados!');
+  }, [fetchData]);
+
   const handleRetry = useCallback(() => {
     console.log('Retrying data fetch...');
     setRetryCount(prev => prev + 1);
@@ -164,6 +171,27 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
   return (
     <Layout title={selectedCondominium.name} onBack={onBack}>
       <div className="space-y-6">
+        {/* Header with Refresh Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
+              Dashboard - {selectedCondominium.name}
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base">
+              Gerencie vigilantes, motocicletas e checklists
+            </p>
+          </div>
+          
+          <Button 
+            onClick={handleRefresh}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Atualizar Dados
+          </Button>
+        </div>
+
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>

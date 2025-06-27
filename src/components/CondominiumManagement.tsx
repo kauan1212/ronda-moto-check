@@ -18,7 +18,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
-  const hasAutoRefreshed = useRef(false);
+  const hasInitialized = useRef(false);
 
   const loadCondominiums = async () => {
     console.log('🔄 Loading condominiums...');
@@ -34,27 +34,44 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     setCondominiums(data);
   };
 
-  // Auto-refresh effect: Executes once when component mounts and user is ready
+  // Simplified auto-refresh: Always execute when component mounts and user is authenticated
   useEffect(() => {
     const performAutoRefresh = async () => {
-      if (!authLoading && user?.id && !hasAutoRefreshed.current) {
-        console.log('🔄 Auto-refresh triggered - Component mounted with authenticated user');
-        hasAutoRefreshed.current = true;
+      // Wait for auth to be ready and user to be available
+      if (authLoading) {
+        console.log('⏳ Auth still loading, waiting...');
+        return;
+      }
+
+      if (!user?.id) {
+        console.log('🚫 No user found, clearing condominiums...');
+        setCondominiums([]);
+        hasInitialized.current = false;
+        return;
+      }
+
+      // Execute auto-refresh only once when component mounts with authenticated user
+      if (!hasInitialized.current) {
+        console.log('✅ Component mounted with authenticated user, triggering auto-refresh');
+        hasInitialized.current = true;
         
-        // Small delay to ensure auth is fully settled
+        // Small delay to ensure everything is ready
         setTimeout(async () => {
           console.log('🔄 Executing automatic refresh...');
           await handleRefresh();
-        }, 100);
-      } else if (!authLoading && !user?.id) {
-        console.log('🚫 No user found, clearing condominiums...');
-        setCondominiums([]);
-        hasAutoRefreshed.current = false;
+        }, 200);
       }
     };
 
     performAutoRefresh();
   }, [authLoading, user?.id]);
+
+  // Reset initialization flag when user changes (login/logout)
+  useEffect(() => {
+    if (!user?.id) {
+      hasInitialized.current = false;
+    }
+  }, [user?.id]);
 
   // Debug effect: Monitor state changes
   useEffect(() => {
