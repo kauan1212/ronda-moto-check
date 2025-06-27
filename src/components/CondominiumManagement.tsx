@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +24,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     console.log('📋 Setting condominiums state with:', data.length, 'items');
     setCondominiums(data);
     
-    // Force a re-render by logging the state change
     setTimeout(() => {
       console.log('🎯 Condominiums state updated, current length:', data.length);
     }, 100);
@@ -33,15 +31,21 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
   // Main effect: Load data when user is authenticated and ready
   useEffect(() => {
-    console.log('🔍 Main useEffect triggered - authLoading:', authLoading, 'user:', user?.id);
-    
-    if (!authLoading && user?.id) {
-      console.log('✅ Auth ready, loading condominiums for user:', user.id);
-      loadCondominiums();
-    } else if (!authLoading && !user?.id) {
-      console.log('❌ No user after auth loading, clearing condominiums');
-      setCondominiums([]);
-    }
+    const run = async () => {
+      console.log('🔍 [Effect] Checking auth state:', { authLoading, userId: user?.id });
+
+      if (!authLoading && user?.id) {
+        console.log('✅ Auth is ready. Fetching condominiums...');
+        await loadCondominiums();
+      }
+
+      if (!authLoading && !user?.id) {
+        console.log('🚫 No user. Clearing condominiums...');
+        setCondominiums([]);
+      }
+    };
+
+    run();
   }, [authLoading, user?.id]);
 
   // Debug effect: Monitor state changes
@@ -55,7 +59,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     if (success) {
       setEditingCondominium(null);
       setDialogOpen(false);
-      // Reload condominiums after saving
       await loadCondominiums();
     }
     return success;
@@ -72,7 +75,6 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const handleDelete = async (condominium: Condominium) => {
     const success = await deleteCondominium(condominium);
     if (success) {
-      // Reload condominiums after deleting
       await loadCondominiums();
     }
   };
