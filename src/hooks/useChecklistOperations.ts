@@ -13,16 +13,16 @@ export const useChecklistOperations = () => {
     formData: ChecklistFormData,
     vigilantes: Vigilante[],
     motorcycles: Motorcycle[],
-    resetForm: () => void
+    resetForm?: () => void // Tornar opcional para não resetar automaticamente
   ) => {
     if (!formData.vigilante_id || !formData.motorcycle_id) {
       toast.error('Por favor, selecione um vigilante e um veículo');
-      return;
+      return false;
     }
 
     if (!formData.signature) {
       toast.error('Por favor, adicione sua assinatura');
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -33,7 +33,7 @@ export const useChecklistOperations = () => {
 
       if (!selectedVigilante || !selectedMotorcycle) {
         toast.error('Vigilante ou veículo não encontrados');
-        return;
+        return false;
       }
 
       // Convert vehicle_photos to the format expected by the database
@@ -87,16 +87,22 @@ export const useChecklistOperations = () => {
       if (error) {
         console.error('Erro ao salvar checklist:', error);
         toast.error(`Erro ao salvar checklist: ${error.message}`);
-        return;
+        return false;
       }
 
       console.log('Checklist salvo com sucesso:', data);
-      toast.success('Checklist salvo com sucesso!');
-      resetForm();
+      toast.success('Checklist salvo com sucesso! Dados mantidos para nova vistoria.');
       
+      // Não resetar automaticamente - apenas se explicitamente solicitado
+      if (resetForm) {
+        resetForm();
+      }
+      
+      return true;
     } catch (error) {
       console.error('Erro inesperado:', error);
       toast.error('Erro inesperado ao salvar checklist');
+      return false;
     } finally {
       setIsSaving(false);
     }

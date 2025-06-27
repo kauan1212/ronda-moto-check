@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useCondominiumOperations } from '@/hooks/useCondominiumOperations';
@@ -18,73 +17,53 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
-  const hasInitialized = useRef(false);
 
-  const loadCondominiums = async () => {
-    console.log('🔄 Loading condominiums...');
-    const data = await fetchCondominiums();
-    console.log('📋 Setting condominiums state with:', data.length, 'items');
-    setCondominiums(data);
-  };
-
-  const handleRefresh = async () => {
-    console.log('🔄 Manual refresh triggered...');
-    const data = await refreshCondominiums();
-    console.log('📋 Refreshed condominiums, setting state with:', data.length, 'items');
-    setCondominiums(data);
-  };
-
-  // Simplified auto-refresh: Always execute when component mounts and user is authenticated
+  // Auto-refresh simplificado - carrega sempre que o componente monta
   useEffect(() => {
-    const performAutoRefresh = async () => {
-      // Wait for auth to be ready and user to be available
+    const loadCondominiums = async () => {
       if (authLoading) {
-        console.log('⏳ Auth still loading, waiting...');
+        console.log('⏳ Auth ainda carregando, aguardando...');
         return;
       }
 
       if (!user?.id) {
-        console.log('🚫 No user found, clearing condominiums...');
+        console.log('🚫 Usuário não encontrado, limpando condomínios...');
         setCondominiums([]);
-        hasInitialized.current = false;
         return;
       }
 
-      // Execute auto-refresh only once when component mounts with authenticated user
-      if (!hasInitialized.current) {
-        console.log('✅ Component mounted with authenticated user, triggering auto-refresh');
-        hasInitialized.current = true;
-        
-        // Small delay to ensure everything is ready
-        setTimeout(async () => {
-          console.log('🔄 Executing automatic refresh...');
-          await handleRefresh();
-        }, 200);
+      try {
+        console.log('🔄 Carregando condomínios automaticamente...');
+        const data = await fetchCondominiums();
+        console.log('📋 Condomínios carregados:', data.length, 'itens');
+        setCondominiums(data);
+      } catch (error) {
+        console.error('❌ Erro ao carregar condomínios:', error);
       }
     };
 
-    performAutoRefresh();
-  }, [authLoading, user?.id]);
+    loadCondominiums(); // Executa uma vez ao montar o componente
+  }, [authLoading, user?.id, fetchCondominiums]);
 
-  // Reset initialization flag when user changes (login/logout)
-  useEffect(() => {
-    if (!user?.id) {
-      hasInitialized.current = false;
+  const handleRefresh = async () => {
+    console.log('🔄 Refresh manual acionado...');
+    try {
+      const data = await refreshCondominiums();
+      console.log('📋 Condomínios atualizados:', data.length, 'itens');
+      setCondominiums(data);
+    } catch (error) {
+      console.error('❌ Erro no refresh manual:', error);
     }
-  }, [user?.id]);
-
-  // Debug effect: Monitor state changes
-  useEffect(() => {
-    console.log('📊 State Debug - condominiums.length:', condominiums.length);
-    console.log('📊 Current condominiums:', condominiums.map(c => ({ id: c.id, name: c.name })));
-  }, [condominiums]);
+  };
 
   const handleSubmit = async (values: any) => {
     const success = await saveCondominium(values, editingCondominium);
     if (success) {
       setEditingCondominium(null);
       setDialogOpen(false);
-      await loadCondominiums();
+      // Recarrega a lista após salvar
+      const data = await fetchCondominiums();
+      setCondominiums(data);
     }
     return success;
   };
@@ -131,7 +110,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     );
   }
 
-  console.log('🎨 Rendering CondominiumManagement with', condominiums.length, 'condominiums');
+  console.log('🎨 Renderizando CondominiumManagement com', condominiums.length, 'condomínios');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4">
@@ -140,7 +119,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {condominiums.map((condominium) => {
-            console.log('🏢 Rendering condominium card:', condominium.name);
+            console.log('🏢 Renderizando card do condomínio:', condominium.name);
             return (
               <CondominiumCard
                 key={condominium.id}

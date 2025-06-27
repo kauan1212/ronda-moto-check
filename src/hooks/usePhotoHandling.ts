@@ -6,7 +6,7 @@ import { VehiclePhoto } from '@/types/checklist';
 export const usePhotoHandling = () => {
   const [showFaceCamera, setShowFaceCamera] = useState(false);
   const [showVehicleCamera, setShowVehicleCamera] = useState(false);
-  const [currentVehiclePhotoCategory, setCurrentVehiclePhotoCategory] = useState<'front' | 'back' | 'left' | 'right'>('front');
+  const [currentVehiclePhotoCategory, setCurrentVehiclePhotoCategory] = useState<'front' | 'back' | 'left' | 'right' | 'additional'>('front');
   const [showFuelCamera, setShowFuelCamera] = useState(false);
   const [showKmCamera, setShowKmCamera] = useState(false);
 
@@ -60,7 +60,7 @@ export const usePhotoHandling = () => {
     }
   };
 
-  const handleVehiclePhotoCapture = (category: 'front' | 'back' | 'left' | 'right') => {
+  const handleVehiclePhotoCapture = (category: 'front' | 'back' | 'left' | 'right' | 'additional') => {
     setCurrentVehiclePhotoCategory(category);
     setShowVehicleCamera(true);
   };

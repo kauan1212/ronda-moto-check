@@ -1,7 +1,7 @@
 
 export interface VehiclePhoto {
   url: string;
-  category: 'front' | 'back' | 'left' | 'right';
+  category: 'front' | 'back' | 'left' | 'right' | 'additional';
 }
 
 export interface ChecklistFormData {

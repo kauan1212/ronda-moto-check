@@ -47,7 +47,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
     handleVehiclePhotoCapture
   } = usePhotoHandling();
 
-  const onSave = () => handleSave(formData, vigilantes, motorcycles, resetForm);
+  // Não resetar automaticamente após salvar
+  const onSave = () => handleSave(formData, vigilantes, motorcycles);
   const onGeneratePDF = () => handleGeneratePDF(formData, vigilantes, motorcycles);
 
   return (
@@ -130,7 +131,8 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
           onCancel={() => setShowVehicleCamera(false)}
           title={`Capturar Foto do Veículo - ${currentVehiclePhotoCategory === 'front' ? 'Frente' : 
                   currentVehiclePhotoCategory === 'back' ? 'Trás' : 
-                  currentVehiclePhotoCategory === 'left' ? 'Lateral Esquerda' : 'Lateral Direita'}`}
+                  currentVehiclePhotoCategory === 'left' ? 'Lateral Esquerda' : 
+                  currentVehiclePhotoCategory === 'right' ? 'Lateral Direita' : 'Foto Adicional'}`}
         />
       )}
 

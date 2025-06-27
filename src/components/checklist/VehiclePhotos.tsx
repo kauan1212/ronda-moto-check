@@ -6,12 +6,12 @@ import { Camera, X } from 'lucide-react';
 
 interface VehiclePhoto {
   url: string;
-  category: 'front' | 'back' | 'left' | 'right';
+  category: 'front' | 'back' | 'left' | 'right' | 'additional';
 }
 
 interface VehiclePhotosProps {
   photos: VehiclePhoto[];
-  onCaptureClick: (category: 'front' | 'back' | 'left' | 'right') => void;
+  onCaptureClick: (category: 'front' | 'back' | 'left' | 'right' | 'additional') => void;
   onRemovePhoto: (index: number) => void;
 }
 
@@ -20,7 +20,8 @@ const VehiclePhotos = ({ photos, onCaptureClick, onRemovePhoto }: VehiclePhotosP
     { key: 'front' as const, label: 'Frente', color: 'bg-blue-500' },
     { key: 'back' as const, label: 'Trás', color: 'bg-green-500' },
     { key: 'left' as const, label: 'Lateral Esquerda', color: 'bg-yellow-500' },
-    { key: 'right' as const, label: 'Lateral Direita', color: 'bg-purple-500' }
+    { key: 'right' as const, label: 'Lateral Direita', color: 'bg-purple-500' },
+    { key: 'additional' as const, label: 'Foto Adicional', color: 'bg-orange-500' }
   ];
 
   const getCategoryLabel = (category: string) => {
@@ -37,7 +38,7 @@ const VehiclePhotos = ({ photos, onCaptureClick, onRemovePhoto }: VehiclePhotosP
         <CardTitle className="text-lg sm:text-xl">Fotos do Veículo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
           {categories.map((category) => (
             <Button
               key={category.key}
