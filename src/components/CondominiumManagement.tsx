@@ -13,8 +13,8 @@ interface CondominiumManagementProps {
 }
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
-  const { user } = useAuth();
-  const { loading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
+  const { user, loading: authLoading } = useAuth();
+  const { loading: condominiumLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
@@ -26,16 +26,21 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     setCondominiums(data);
   };
 
-  // Carregar condomínios sempre que o usuário mudar ou componente montar
+  // Aguardar auth carregar completamente antes de buscar dados
   useEffect(() => {
-    console.log('CondominiumManagement useEffect triggered, user:', user?.id);
-    if (user?.id) {
-      loadCondominiums();
-    } else {
-      console.log('No user, clearing condominiums');
-      setCondominiums([]);
+    console.log('CondominiumManagement useEffect triggered, authLoading:', authLoading, 'user:', user?.id);
+    
+    // Só buscar dados quando auth não estiver carregando
+    if (!authLoading) {
+      if (user?.id) {
+        console.log('Auth loaded, fetching condominiums for user:', user.id);
+        loadCondominiums();
+      } else {
+        console.log('No user after auth loading, clearing condominiums');
+        setCondominiums([]);
+      }
     }
-  }, [user?.id]);
+  }, [authLoading, user?.id]); // Incluir authLoading nas dependências
 
   const handleSubmit = async (values: any) => {
     const success = await saveCondominium(values, editingCondominium);
@@ -76,12 +81,15 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }
   };
 
-  if (loading) {
+  // Mostrar loading enquanto auth ou condominiums estão carregando
+  if (authLoading || condominiumLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 px-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 text-sm sm:text-base">Carregando condomínios...</p>
+          <p className="text-slate-600 text-sm sm:text-base">
+            {authLoading ? 'Carregando autenticação...' : 'Carregando condomínios...'}
+          </p>
         </div>
       </div>
     );

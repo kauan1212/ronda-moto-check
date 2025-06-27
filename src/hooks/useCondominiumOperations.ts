@@ -6,11 +6,17 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
 export const useCondominiumOperations = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const fetchCondominiums = async (): Promise<Condominium[]> => {
-    if (!user) {
+    // Aguardar que auth termine de carregar antes de buscar dados
+    if (authLoading) {
+      console.log('Auth still loading, waiting...');
+      return [];
+    }
+
+    if (!user?.id) {
       console.log('No user found, skipping fetch');
       return [];
     }
@@ -125,7 +131,7 @@ export const useCondominiumOperations = () => {
   };
 
   return {
-    loading,
+    loading: loading || authLoading, // Combinar loading states
     fetchCondominiums,
     saveCondominium,
     deleteCondominium,

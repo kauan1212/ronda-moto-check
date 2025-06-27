@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
@@ -14,7 +15,7 @@ import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
 const AdminPanel = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
 
   const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
@@ -40,7 +41,7 @@ const AdminPanel = () => {
       console.log('Fetched condominiums:', data?.length);
       return data as Condominium[];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !authLoading, // Aguardar auth carregar completamente
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true
@@ -124,7 +125,7 @@ const AdminPanel = () => {
         condominiums={condominiums}
         selectedId={selectedCondominiumId}
         onSelect={handleCondominiumSelect}
-        loading={condominiumsLoading}
+        loading={condominiumsLoading || authLoading}
       />
 
       <Tabs defaultValue="condominiums" className="space-y-4 sm:space-y-6">
