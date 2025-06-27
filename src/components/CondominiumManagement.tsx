@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,7 +14,7 @@ interface CondominiumManagementProps {
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: condominiumLoading, authLoading: hookAuthLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
+  const { loading: condominiumLoading, fetchCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
@@ -91,8 +92,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     }
   };
 
-  // Show loading only when auth is loading OR when we're actively fetching condominiums
-  const isLoading = authLoading || (condominiumLoading && condominiums.length === 0);
+  const isLoading = authLoading || condominiumLoading;
 
   if (isLoading) {
     return (
@@ -128,7 +128,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
             );
           })}
           
-          {condominiums.length === 0 && (
+          {!condominiumLoading && condominiums.length === 0 && (
             <CondominiumEmptyState />
           )}
         </div>
