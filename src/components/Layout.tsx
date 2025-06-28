@@ -64,8 +64,8 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
             {/* Logo and Title - mobile: col-span-6, desktop: col-span-8 */}
             <div className="col-span-6 sm:col-span-8 flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
               <img 
-                src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
-                alt="Logo" 
+                src="/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png" 
+                alt="VigioSystem Logo" 
                 className="h-6 w-6 sm:h-8 sm:w-8 rounded flex-shrink-0"
               />
               <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-800 truncate">

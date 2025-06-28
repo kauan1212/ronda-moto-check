@@ -139,12 +139,20 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          {userLogo && (
+          {userLogo ? (
             <div className="flex justify-center mb-4">
               <img 
                 src={userLogo} 
                 alt="Logo" 
                 className="max-h-20 max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png" 
+                alt="VigioSystem Logo" 
+                className="h-20 w-20 object-contain"
               />
             </div>
           )}
