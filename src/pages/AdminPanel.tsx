@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ const AdminPanel = () => {
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
 
   const isGeneralAdmin = user?.email === 'kauankg@hotmail.com';
+  const isSuperAdmin = user?.email === 'kauankg@hotmail.com';
 
   // Query para condomínios - admin geral vê todos, usuários normais veem apenas os seus
   const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
@@ -174,12 +174,21 @@ const AdminPanel = () => {
 
       <Tabs defaultValue="condominiums" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto pb-2">
-          <TabsList className={`grid w-full ${isGeneralAdmin ? 'grid-cols-3' : 'grid-cols-6'} min-w-max gap-1`}>
+          <TabsList className={`grid w-full ${isGeneralAdmin ? (isSuperAdmin ? 'grid-cols-4' : 'grid-cols-3') : 'grid-cols-6'} min-w-max gap-1`}>
             <TabsTrigger value="condominiums" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
               <Building2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Condomínios</span>
               <span className="sm:hidden">Cond.</span>
             </TabsTrigger>
+            
+            {/* Aba de usuários apenas para super admin */}
+            {isSuperAdmin && (
+              <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+                <UserCog className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Usuários</span>
+                <span className="sm:hidden">Users</span>
+              </TabsTrigger>
+            )}
             
             {!isGeneralAdmin && (
               <>
@@ -192,11 +201,6 @@ const AdminPanel = () => {
                   <Car className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                   <span className="hidden sm:inline">Veículos</span>
                   <span className="sm:hidden">Veíc.</span>
-                </TabsTrigger>
-                <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
-                  <UserCog className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">Usuários</span>
-                  <span className="sm:hidden">Users</span>
                 </TabsTrigger>
               </>
             )}
@@ -217,6 +221,13 @@ const AdminPanel = () => {
         <TabsContent value="condominiums" className="space-y-4 sm:space-y-6">
           <CondominiumManagement onSelect={handleCondominiumSelect} />
         </TabsContent>
+
+        {/* Tab de usuários apenas para super admin */}
+        {isSuperAdmin && (
+          <TabsContent value="users" className="space-y-4 sm:space-y-6">
+            <UserManagement />
+          </TabsContent>
+        )}
 
         {!isGeneralAdmin && (
           <>
@@ -246,10 +257,6 @@ const AdminPanel = () => {
                   Selecione um condomínio para gerenciar veículos
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="users" className="space-y-4 sm:space-y-6">
-              <UserManagement />
             </TabsContent>
           </>
         )}

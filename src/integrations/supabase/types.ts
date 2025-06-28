@@ -233,24 +233,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status_enum"]
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           email: string
+          frozen_at: string | null
+          frozen_by: string | null
           full_name: string | null
           id: string
           is_admin: boolean
           logo_url: string | null
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status_enum"]
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email: string
+          frozen_at?: string | null
+          frozen_by?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean
           logo_url?: string | null
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status_enum"]
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           email?: string
+          frozen_at?: string | null
+          frozen_by?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean
@@ -329,9 +344,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_active: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_status_enum: "pending" | "active" | "frozen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -446,6 +465,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_status_enum: ["pending", "active", "frozen"],
+    },
   },
 } as const

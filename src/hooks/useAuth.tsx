@@ -30,8 +30,43 @@ export const useAuth = () => {
       
       try {
         if (session?.user) {
+          // Verificar status da conta
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('account_status, is_admin')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+            if (mounted) {
+              setAuthState({
+                user: null,
+                session: null,
+                loading: false,
+                isAdmin: false,
+              });
+            }
+            return;
+          }
+
+          // Se a conta não está ativa, fazer logout
+          if (profile.account_status !== 'active') {
+            console.log('Account not active, signing out:', profile.account_status);
+            await supabase.auth.signOut();
+            if (mounted) {
+              setAuthState({
+                user: null,
+                session: null,
+                loading: false,
+                isAdmin: false,
+              });
+            }
+            return;
+          }
+
           // Check if user is admin
-          const isAdmin = session.user.email === 'kauankg@hotmail.com';
+          const isAdmin = session.user.email === 'kauankg@hotmail.com' || profile.is_admin;
           
           if (mounted) {
             setAuthState({
@@ -107,6 +142,42 @@ export const useAuth = () => {
       email,
       password,
     });
+    
+    if (error) {
+      console.log('Sign in error:', error);
+      return { data, error };
+    }
+
+    // Verificar status da conta após login bem-sucedido
+    if (data.user) {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('account_status')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error checking account status:', profileError);
+        return { data, error: profileError };
+      }
+
+      if (profile.account_status === 'pending') {
+        await supabase.auth.signOut();
+        return { 
+          data: null, 
+          error: { message: 'Sua conta está pendente de aprovação pelo administrador.' }
+        };
+      }
+
+      if (profile.account_status === 'frozen') {
+        await supabase.auth.signOut();
+        return { 
+          data: null, 
+          error: { message: 'Sua conta foi congelada. Entre em contato com o administrador.' }
+        };
+      }
+    }
+
     console.log('Sign in result:', { data, error });
     return { data, error };
   };

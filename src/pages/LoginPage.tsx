@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -74,7 +76,11 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
       if (error) {
         console.error('Sign in error:', error);
         
-        if (error.message.includes('Invalid login credentials')) {
+        if (error.message.includes('Sua conta está pendente de aprovação')) {
+          setError('Sua conta está pendente de aprovação pelo administrador. Aguarde a liberação para acessar o sistema.');
+        } else if (error.message.includes('Sua conta foi congelada')) {
+          setError('Sua conta foi congelada pelo administrador. Entre em contato para mais informações.');
+        } else if (error.message.includes('Invalid login credentials')) {
           setError('Email ou senha incorretos. Verifique suas credenciais.');
         } else if (error.message.includes('Email not confirmed')) {
           setError('Email ainda não confirmado. Verifique sua caixa de entrada.');
@@ -119,13 +125,13 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
         console.log('Sign up successful:', data.user.email);
         
         if (data.user.email_confirmed_at) {
-          toast.success('Conta criada com sucesso!');
-          setSuccess('Conta criada com sucesso! Fazendo login...');
+          toast.success('Conta criada! Aguarde aprovação do administrador.');
+          setSuccess('Conta criada com sucesso! Sua conta será aprovada pelo administrador antes que você possa acessar o sistema.');
         } else {
-          toast.success('Conta criada! Verifique seu email para confirmarr.');
-          setSuccess('Conta criada com sucesso! Verifique seu email para confirmar antes de fazer login.');
-          setIsSignUp(false);
+          toast.success('Conta criada! Verifique seu email e aguarde aprovação.');
+          setSuccess('Conta criada com sucesso! Verifique seu email para confirmar e aguarde a aprovação do administrador.');
         }
+        setIsSignUp(false);
       }
     } catch (err: any) {
       console.error('Unexpected sign up error:', err);
@@ -133,6 +139,15 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getErrorIcon = () => {
+    if (error.includes('pendente de aprovação')) {
+      return <Clock className="h-4 w-4" />;
+    } else if (error.includes('congelada')) {
+      return <XCircle className="h-4 w-4" />;
+    }
+    return null;
   };
 
   return (
@@ -172,7 +187,10 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
               <form onSubmit={handleSignIn} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
+                    <div className="flex items-center gap-2">
+                      {getErrorIcon()}
+                      <AlertDescription>{error}</AlertDescription>
+                    </div>
                   </Alert>
                 )}
                 
@@ -226,7 +244,10 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                 
                 {success && (
                   <Alert>
-                    <AlertDescription className="text-green-700">{success}</AlertDescription>
+                    <div className="flex items-start gap-2">
+                      <Clock className="h-4 w-4 mt-0.5 text-blue-600" />
+                      <AlertDescription className="text-blue-700">{success}</AlertDescription>
+                    </div>
                   </Alert>
                 )}
 
@@ -237,6 +258,13 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
                     </AlertDescription>
                   </Alert>
                 )}
+
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Importante:</strong> Novas contas precisam ser aprovadas pelo administrador antes do primeiro acesso.
+                  </AlertDescription>
+                </Alert>
                 
                 <div className="space-y-2">
                   <Label htmlFor="signup-fullName">Nome Completo</Label>

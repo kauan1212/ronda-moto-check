@@ -18,6 +18,9 @@ const UserManagement = () => {
     isLoading,
     createUserMutation,
     updateUserMutation,
+    approveUserMutation,
+    freezeUserMutation,
+    unfreezeUserMutation,
     deleteUserMutation
   } = useUserOperations();
 
@@ -48,6 +51,20 @@ const UserManagement = () => {
     setEditingUser(null);
   };
 
+  const handleApproveUser = (userId: string) => {
+    approveUserMutation.mutate(userId);
+  };
+
+  const handleFreezeUser = (userId: string) => {
+    if (window.confirm('Tem certeza que deseja congelar esta conta? O usuário não conseguirá mais acessar o sistema.')) {
+      freezeUserMutation.mutate(userId);
+    }
+  };
+
+  const handleUnfreezeUser = (userId: string) => {
+    unfreezeUserMutation.mutate(userId);
+  };
+
   const handleDeleteUser = (userId: string) => {
     deleteUserMutation.mutate(userId);
   };
@@ -60,6 +77,8 @@ const UserManagement = () => {
     );
   }
 
+  const pendingCount = users.filter(user => user.account_status === 'pending').length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -67,6 +86,11 @@ const UserManagement = () => {
           <h2 className="text-2xl font-bold">Gerenciar Usuários</h2>
           <p className="text-muted-foreground">
             Crie, visualize e gerencie contas de usuário do sistema
+            {pendingCount > 0 && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         
@@ -121,7 +145,11 @@ const UserManagement = () => {
         users={users}
         onEdit={handleEditUser}
         onDelete={handleDeleteUser}
+        onApprove={handleApproveUser}
+        onFreeze={handleFreezeUser}
+        onUnfreeze={handleUnfreezeUser}
         deleteLoading={deleteUserMutation.isPending}
+        statusLoading={approveUserMutation.isPending || freezeUserMutation.isPending || unfreezeUserMutation.isPending}
       />
     </div>
   );

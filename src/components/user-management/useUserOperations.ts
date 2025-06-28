@@ -49,13 +49,15 @@ export const useUserOperations = () => {
 
       console.log('User created in auth:', authData.user?.id);
 
-      // Se for admin, atualizar o perfil
-      if (isAdmin && authData.user) {
-        console.log('Setting admin status for user:', authData.user.id);
-        
+      if (authData.user) {
+        // Atualizar perfil com informações adicionais
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({ is_admin: true })
+          .update({ 
+            is_admin: isAdmin,
+            // Novos usuários ficam pendentes até aprovação do admin
+            account_status: 'pending'
+          })
           .eq('id', authData.user.id);
 
         if (profileError) {
@@ -63,24 +65,26 @@ export const useUserOperations = () => {
           throw profileError;
         }
 
-        // Adicionar role de admin
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: 'admin'
-          });
+        // Se for admin, adicionar role de admin
+        if (isAdmin) {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: authData.user.id,
+              role: 'admin'
+            });
 
-        if (roleError) {
-          console.error('Role assignment error:', roleError);
-          throw roleError;
+          if (roleError) {
+            console.error('Role assignment error:', roleError);
+            throw roleError;
+          }
         }
       }
 
       return authData;
     },
     onSuccess: () => {
-      toast.success('Usuário criado com sucesso!');
+      toast.success('Usuário criado com sucesso! Conta pendente de aprovação.');
       refetch();
     },
     onError: (error: any) => {
@@ -148,6 +152,103 @@ export const useUserOperations = () => {
     }
   });
 
+  // Aprovar usuário
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('Approving user:', userId);
+      
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          account_status: 'active',
+          approved_by: currentUser?.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Approve error:', error);
+        throw error;
+      }
+
+      return userId;
+    },
+    onSuccess: () => {
+      toast.success('Usuário aprovado com sucesso!');
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error('Error approving user:', error);
+      toast.error(`Erro ao aprovar usuário: ${error.message}`);
+    }
+  });
+
+  // Congelar usuário
+  const freezeUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('Freezing user:', userId);
+      
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          account_status: 'frozen',
+          frozen_by: currentUser?.id,
+          frozen_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Freeze error:', error);
+        throw error;
+      }
+
+      return userId;
+    },
+    onSuccess: () => {
+      toast.success('Usuário congelado com sucesso!');
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error('Error freezing user:', error);
+      toast.error(`Erro ao congelar usuário: ${error.message}`);
+    }
+  });
+
+  // Descongelar usuário
+  const unfreezeUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('Unfreezing user:', userId);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          account_status: 'active',
+          frozen_by: null,
+          frozen_at: null
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Unfreeze error:', error);
+        throw error;
+      }
+
+      return userId;
+    },
+    onSuccess: () => {
+      toast.success('Usuário descongelado com sucesso!');
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error('Error unfreezing user:', error);
+      toast.error(`Erro ao descongelar usuário: ${error.message}`);
+    }
+  });
+
   // Deletar usuário
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -198,6 +299,9 @@ export const useUserOperations = () => {
     refetch,
     createUserMutation,
     updateUserMutation,
+    approveUserMutation,
+    freezeUserMutation,
+    unfreezeUserMutation,
     deleteUserMutation
   };
 };
