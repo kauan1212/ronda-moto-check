@@ -1,87 +1,81 @@
 
 import DOMPurify from 'dompurify';
 
+// XSS protection through HTML sanitization
 export const sanitizeInput = (input: string): string => {
-  if (!input || typeof input !== 'string') {
-    return '';
-  }
-
-  // Remove any HTML tags and potential XSS vectors
-  const sanitized = DOMPurify.sanitize(input, {
+  if (!input) return '';
+  
+  // Remove potentially dangerous HTML tags and attributes
+  return DOMPurify.sanitize(input, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],
     KEEP_CONTENT: true
-  });
-
-  // Additional cleaning for SQL injection prevention
-  return sanitized
-    .replace(/[<>'"]/g, '') // Remove potentially dangerous characters
-    .trim()
-    .slice(0, 1000); // Limit length
+  }).trim();
 };
 
+// Sanitize form data object
 export const sanitizeFormData = <T extends Record<string, any>>(data: T): T => {
-  const sanitized = {} as T;
+  const sanitized: any = {};
   
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string') {
-      sanitized[key as keyof T] = sanitizeInput(value) as T[keyof T];
+      sanitized[key] = sanitizeInput(value);
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[key] = value;
+    } else if (value === null || value === undefined) {
+      sanitized[key] = value;
     } else if (Array.isArray(value)) {
-      sanitized[key as keyof T] = value.map(item => 
+      sanitized[key] = value.map(item => 
         typeof item === 'string' ? sanitizeInput(item) : item
-      ) as T[keyof T];
+      );
     } else {
-      sanitized[key as keyof T] = value;
+      sanitized[key] = value;
     }
   }
   
-  return sanitized;
+  return sanitized as T;
 };
 
-export const validateFileUpload = (file: File): { isValid: boolean; error?: string } => {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024; // 5MB
-
-  if (!allowedTypes.includes(file.type)) {
-    return {
-      isValid: false,
-      error: 'Tipo de arquivo não permitido. Use apenas JPG, PNG ou WebP.'
-    };
+// File upload validation
+export const validateFileUpload = async (file: File): Promise<{ isValid: boolean; error?: string }> => {
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    return { isValid: false, error: 'File size exceeds 10MB limit' };
   }
-
-  if (file.size > maxSize) {
-    return {
-      isValid: false,
-      error: 'Arquivo muito grande. Máximo 5MB permitido.'
-    };
+  
+  // Check file type
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { isValid: false, error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed' };
   }
+  
+  // Check file extension matches MIME type
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const mimeToExtension: Record<string, string[]> = {
+    'image/jpeg': ['jpg', 'jpeg'],
+    'image/png': ['png'],
+    'image/gif': ['gif'],
+    'image/webp': ['webp']
+  };
+  
+  const allowedExtensions = mimeToExtension[file.type] || [];
+  if (!extension || !allowedExtensions.includes(extension)) {
+    return { isValid: false, error: 'File extension does not match file type' };
+  }
+  
+  return { isValid: true };
+};
 
-  // Check file header for additional security
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const buffer = new Uint8Array(e.target?.result as ArrayBuffer);
-      const header = Array.from(buffer.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      // Check for valid image headers
-      const validHeaders = [
-        'ffd8ffe0', // JPEG
-        'ffd8ffe1', // JPEG
-        'ffd8ffe2', // JPEG
-        '89504e47', // PNG
-        '52494646', // WebP (RIFF)
-      ];
-
-      const isValidHeader = validHeaders.some(validHeader => 
-        header.toLowerCase().startsWith(validHeader.toLowerCase())
-      );
-
-      resolve({
-        isValid: isValidHeader,
-        error: isValidHeader ? undefined : 'Arquivo corrompido ou não é uma imagem válida.'
-      });
-    };
-    
-    reader.readAsArrayBuffer(file.slice(0, 4));
-  });
+// SQL injection protection for search queries
+export const sanitizeSearchQuery = (query: string): string => {
+  if (!query) return '';
+  
+  // Remove SQL injection patterns
+  return query
+    .replace(/['"`;\\]/g, '') // Remove quotes, semicolons, backslashes
+    .replace(/\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b/gi, '') // Remove SQL keywords
+    .trim()
+    .slice(0, 100); // Limit length
 };
