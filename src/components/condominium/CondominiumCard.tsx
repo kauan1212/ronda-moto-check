@@ -10,9 +10,10 @@ interface CondominiumCardProps {
   onEdit: (condominium: Condominium) => void;
   onDelete: (condominium: Condominium) => void;
   onSelect: (condominium: Condominium) => void;
+  canEdit: boolean;
 }
 
-const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect }: CondominiumCardProps) => {
+const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect, canEdit }: CondominiumCardProps) => {
   return (
     <Card className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
       <CardHeader className="pb-3">
@@ -21,24 +22,26 @@ const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect }: Condominiu
             <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
             <span className="truncate">{condominium.name}</span>
           </div>
-          <div className="flex gap-1 flex-shrink-0 ml-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onEdit(condominium)}
-              className="h-8 w-8 p-0"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => onDelete(condominium)}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-1 flex-shrink-0 ml-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onEdit(condominium)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => onDelete(condominium)}
+                className="h-8 w-8 p-0"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
