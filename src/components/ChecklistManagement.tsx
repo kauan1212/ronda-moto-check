@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,8 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
   const generateChecklistPDF = async (checklist: Checklist) => {
     try {
       toast.success('Preparando download do PDF...');
-      await generatePDF(checklist);
+      // Passar o user_id do condomínio para buscar a logo personalizada
+      await generatePDF(checklist, condominium.user_id);
       toast.success('PDF baixado com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);

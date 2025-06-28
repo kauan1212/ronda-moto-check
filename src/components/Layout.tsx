@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Users, Copy, LogOut, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { usePWA } from '@/hooks/usePWA';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,8 +14,39 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, onBack }: LayoutProps) => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { isInstallable, promptInstall } = usePWA();
+  const [userLogo, setUserLogo] = useState<string>('/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png');
+
+  // Carregar logo personalizada do usuário
+  useEffect(() => {
+    const loadUserLogo = async () => {
+      if (!user?.id) {
+        setUserLogo('/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('logo_url')
+          .eq('id', user.id)
+          .single();
+
+        if (error || !data?.logo_url) {
+          setUserLogo('/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png');
+          return;
+        }
+
+        setUserLogo(data.logo_url);
+      } catch (error) {
+        console.error('Erro ao carregar logo do usuário:', error);
+        setUserLogo('/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png');
+      }
+    };
+
+    loadUserLogo();
+  }, [user?.id]);
 
   const copyVigilanteLink = () => {
     const vigilanteUrl = `${window.location.origin}/vigilante-checklist`;
@@ -64,9 +96,9 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
             {/* Logo and Title - mobile: col-span-6, desktop: col-span-8 */}
             <div className="col-span-6 sm:col-span-8 flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
               <img 
-                src="/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png" 
-                alt="VigioSystem Logo" 
-                className="h-6 w-6 sm:h-8 sm:w-8 rounded flex-shrink-0"
+                src={userLogo}
+                alt="Logo" 
+                className="h-6 w-6 sm:h-8 sm:w-8 rounded flex-shrink-0 object-contain"
               />
               <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-800 truncate">
                 {title}

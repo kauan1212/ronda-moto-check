@@ -108,10 +108,11 @@ export const useChecklistOperations = () => {
     }
   };
 
-  const handleGeneratePDF = (
+  const handleGeneratePDF = async (
     formData: ChecklistFormData,
     vigilantes: Vigilante[],
-    motorcycles: Motorcycle[]
+    motorcycles: Motorcycle[],
+    userId?: string // Adicionar parâmetro userId
   ) => {
     const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
     const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
@@ -135,7 +136,7 @@ export const useChecklistOperations = () => {
       condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id || '',
       motorcycle_photos: vehiclePhotoUrls,
       vehicle_photos: formData.vehicle_photos
-    });
+    }, userId); // Passar userId para o gerador de PDF
   };
 
   return {

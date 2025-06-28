@@ -1,5 +1,7 @@
+
 import jsPDF from 'jspdf';
 import { Checklist } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const getStatusLabel = (status: string) => {
   switch (status) {
@@ -83,8 +85,32 @@ const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number,
   }
 };
 
+// Função para buscar a logo do usuário
+const getUserLogo = async (userId?: string): Promise<string> => {
+  if (!userId) {
+    return '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png';
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('logo_url')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data?.logo_url) {
+      return '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png';
+    }
+
+    return data.logo_url;
+  } catch (error) {
+    console.error('Erro ao buscar logo do usuário:', error);
+    return '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png';
+  }
+};
+
 // Função principal para gerar PDF - força download
-export const generatePDF = async (checklistData: Checklist) => {
+export const generatePDF = async (checklistData: Checklist, userId?: string) => {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -92,11 +118,21 @@ export const generatePDF = async (checklistData: Checklist) => {
   const margin = 20;
   const lineHeight = 8;
 
-  // Header
+  // Buscar logo do usuário
+  const userLogo = await getUserLogo(userId);
+
+  // Header com logo personalizada
+  try {
+    await addImageToPDF(pdf, userLogo, margin, yPos - 5, 30, 20);
+  } catch (error) {
+    console.error('Erro ao carregar logo no PDF:', error);
+  }
+
+  // Título ao lado da logo
   pdf.setFontSize(20);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('RELATÓRIO DE VISTORIA DE VEÍCULO', pageWidth / 2, yPos, { align: 'center' });
-  yPos += 15;
+  pdf.text('RELATÓRIO DE VISTORIA DE VEÍCULO', margin + 35, yPos + 8);
+  yPos += 25;
 
   // Date and time
   pdf.setFontSize(12);
@@ -400,6 +436,6 @@ export const generatePDF = async (checklistData: Checklist) => {
 };
 
 // Função específica para gerar PDF do dashboard (reutiliza a função principal)
-export const generateChecklistPDF = async (checklistData: Checklist) => {
-  return await generatePDF(checklistData);
+export const generateChecklistPDF = async (checklistData: Checklist, userId?: string) => {
+  return await generatePDF(checklistData, userId);
 };
