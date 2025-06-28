@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import { Checklist } from '@/types';
 
@@ -52,7 +51,7 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         
-        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        const base64 = canvas.toDataURL('image/jpeg', 0.9);
         resolve(base64);
       } catch (error) {
         console.error('Erro ao converter imagem:', error);
@@ -69,7 +68,7 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
   });
 };
 
-const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number, width: number, height: number) => {
+const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number, width: number, height: number): Promise<boolean> => {
   try {
     const base64Image = await loadImageAsBase64(imageUrl);
     pdf.addImage(base64Image, 'JPEG', x, y, width, height);
@@ -84,6 +83,7 @@ const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number,
   }
 };
 
+// Função principal para gerar PDF - força download
 export const generatePDF = async (checklistData: Checklist) => {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -197,7 +197,7 @@ export const generatePDF = async (checklistData: Checklist) => {
   pdf.text('REGISTROS FOTOGRÁFICOS', margin, yPos);
   yPos += 15;
 
-  // Vehicle photos
+  // Vehicle photos - com melhor qualidade e organização
   const vehiclePhotos = checklistData.motorcycle_photos || [];
   if (vehiclePhotos.length > 0) {
     pdf.setFontSize(12);
@@ -205,15 +205,15 @@ export const generatePDF = async (checklistData: Checklist) => {
     pdf.text(`Fotos do Veículo (${vehiclePhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 70;
-    const photoHeight = 50;
+    const photoWidth = 80;
+    const photoHeight = 60;
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
     for (let i = 0; i < vehiclePhotos.length; i++) {
       const photoUrl = vehiclePhotos[i];
       
-      if (yPos > pageHeight - 70) {
+      if (yPos > pageHeight - 80) {
         pdf.addPage();
         yPos = 20;
         currentPhotoIndex = 0;
@@ -231,19 +231,19 @@ export const generatePDF = async (checklistData: Checklist) => {
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
-        yPos += photoHeight + 20;
+        yPos += photoHeight + 25;
       }
     }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
-      yPos += photoHeight + 20;
+      yPos += photoHeight + 25;
     }
   }
 
-  // Fuel photos
+  // Fuel photos - com melhor qualidade
   const fuelPhotos = checklistData.fuel_photos || [];
   if (fuelPhotos.length > 0) {
-    if (yPos > pageHeight - 70) {
+    if (yPos > pageHeight - 80) {
       pdf.addPage();
       yPos = 20;
     }
@@ -253,36 +253,36 @@ export const generatePDF = async (checklistData: Checklist) => {
     pdf.text(`Fotos do Combustível (${fuelPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 60;
-    const photoHeight = 45;
-    const photosPerRow = 3;
+    const photoWidth = 70;
+    const photoHeight = 50;
+    const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
     for (const photoUrl of fuelPhotos) {
-      if (yPos > pageHeight - 60) {
+      if (yPos > pageHeight - 70) {
         pdf.addPage();
         yPos = 20;
         currentPhotoIndex = 0;
       }
 
-      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
+      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 15);
       await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
-        yPos += photoHeight + 15;
+        yPos += photoHeight + 20;
       }
     }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
-      yPos += photoHeight + 15;
+      yPos += photoHeight + 20;
     }
   }
 
-  // Odometer photos
+  // Odometer photos - com melhor qualidade
   const kmPhotos = checklistData.km_photos || [];
   if (kmPhotos.length > 0) {
-    if (yPos > pageHeight - 70) {
+    if (yPos > pageHeight - 80) {
       pdf.addPage();
       yPos = 20;
     }
@@ -292,35 +292,35 @@ export const generatePDF = async (checklistData: Checklist) => {
     pdf.text(`Fotos do Odômetro (${kmPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 60;
-    const photoHeight = 45;
-    const photosPerRow = 3;
+    const photoWidth = 70;
+    const photoHeight = 50;
+    const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
     for (const photoUrl of kmPhotos) {
-      if (yPos > pageHeight - 60) {
+      if (yPos > pageHeight - 70) {
         pdf.addPage();
         yPos = 20;
         currentPhotoIndex = 0;
       }
 
-      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
+      const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 15);
       await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
-        yPos += photoHeight + 15;
+        yPos += photoHeight + 20;
       }
     }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
-      yPos += photoHeight + 15;
+      yPos += photoHeight + 20;
     }
   }
 
-  // Face photo
+  // Face photo - com melhor qualidade
   if (checklistData.face_photo) {
-    if (yPos > pageHeight - 70) {
+    if (yPos > pageHeight - 80) {
       pdf.addPage();
       yPos = 20;
     }
@@ -330,8 +330,8 @@ export const generatePDF = async (checklistData: Checklist) => {
     pdf.text('Foto Facial:', margin, yPos);
     yPos += 10;
 
-    await addImageToPDF(pdf, checklistData.face_photo, margin, yPos, 60, 45);
-    yPos += 50;
+    await addImageToPDF(pdf, checklistData.face_photo, margin, yPos, 70, 55);
+    yPos += 60;
   }
 
   // Observations
@@ -392,7 +392,14 @@ export const generatePDF = async (checklistData: Checklist) => {
     pdf.text(`Data: ${dateStr} às ${timeStr}`, margin, yPos + 6);
   }
 
-  // Save the PDF - força download
+  // FORÇA DOWNLOAD do PDF (não abre no navegador)
   const fileName = `checklist-${checklistData.motorcycle_plate}-${dateStr.replace(/\//g, '-')}.pdf`;
   pdf.save(fileName);
+  
+  return true;
+};
+
+// Função específica para gerar PDF do dashboard (reutiliza a função principal)
+export const generateChecklistPDF = async (checklistData: Checklist) => {
+  return await generatePDF(checklistData);
 };

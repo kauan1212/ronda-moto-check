@@ -19,22 +19,28 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // Auto-refresh que executa apenas uma vez ao acessar a página
+  const isGeneralAdmin = user?.email === 'kauankg@hotmail.com';
+
+  // Auto-refresh simples que executa apenas uma vez ao acessar a página
   useEffect(() => {
     const loadCondominiums = async () => {
-      if (!user?.id || dataLoaded) {
+      if (!user?.id || initialLoadDone) {
         return;
       }
 
       try {
         console.log('🔄 Carregando condomínios automaticamente...');
-        const { data, error } = await supabase
-          .from('condominiums')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('name');
+        
+        let query = supabase.from('condominiums').select('*').order('name');
+        
+        // Se não for admin geral, filtra apenas os condomínios do usuário
+        if (!isGeneralAdmin) {
+          query = query.eq('user_id', user.id);
+        }
+        
+        const { data, error } = await query;
 
         if (error) {
           console.error('❌ Erro ao carregar condomínios:', error);
@@ -43,25 +49,28 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 
         console.log('📋 Condomínios carregados:', data.length, 'itens');
         setCondominiums(data);
-        setDataLoaded(true);
+        setInitialLoadDone(true);
       } catch (error) {
         console.error('❌ Erro ao carregar condomínios:', error);
       }
     };
 
-    if (!authLoading && user?.id && !dataLoaded) {
+    if (!authLoading && user?.id) {
       loadCondominiums();
     }
-  }, [authLoading, user?.id, dataLoaded]);
+  }, [user?.id, authLoading, isGeneralAdmin, initialLoadDone]);
 
   const handleRefresh = async () => {
     console.log('🔄 Refresh manual acionado...');
     try {
-      const { data, error } = await supabase
-        .from('condominiums')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
+      let query = supabase.from('condominiums').select('*').order('name');
+      
+      // Se não for admin geral, filtra apenas os condomínios do usuário
+      if (!isGeneralAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query;
 
       if (error) {
         console.error('❌ Erro no refresh manual:', error);
@@ -87,7 +96,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   };
 
   const handleEdit = (condominium: Condominium) => {
-    if (condominium.user_id !== user?.id) {
+    if (!isGeneralAdmin && condominium.user_id !== user?.id) {
       return;
     }
     setEditingCondominium(condominium);
@@ -134,7 +143,9 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <CondominiumHeader onAddClick={handleAddClick} onRefresh={handleRefresh} />
+        {!isGeneralAdmin && (
+          <CondominiumHeader onAddClick={handleAddClick} onRefresh={handleRefresh} />
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {condominiums.map((condominium) => {
@@ -146,6 +157,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onSelect={onSelect}
+                canEdit={isGeneralAdmin || condominium.user_id === user?.id}
               />
             );
           })}
@@ -155,12 +167,14 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
           )}
         </div>
 
-        <CondominiumDialog
-          open={dialogOpen}
-          onOpenChange={handleDialogChange}
-          editingCondominium={editingCondominium}
-          onSubmit={handleSubmit}
-        />
+        {!isGeneralAdmin && (
+          <CondominiumDialog
+            open={dialogOpen}
+            onOpenChange={handleDialogChange}
+            editingCondominium={editingCondominium}
+            onSubmit={handleSubmit}
+          />
+        )}
       </div>
     </div>
   );

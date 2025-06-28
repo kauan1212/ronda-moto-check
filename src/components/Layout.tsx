@@ -42,35 +42,40 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 safe-area-inset-top safe-area-inset-bottom">
-      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="w-full px-2 sm:px-4 lg:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
+          <div className="grid grid-cols-12 items-center gap-2 sm:gap-4">
+            {/* Back button - mobile: col-span-2, desktop: col-span-1 */}
+            <div className="col-span-2 sm:col-span-1 flex justify-start">
               {onBack && (
                 <Button 
                   onClick={onBack}
                   variant="outline" 
                   size="sm"
-                  className="flex items-center gap-1 shrink-0 px-2 sm:px-3"
+                  className="p-2 sm:px-3"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Voltar</span>
+                  <span className="hidden sm:inline ml-1">Voltar</span>
                 </Button>
               )}
-              <div className="flex items-center min-w-0 flex-1 gap-2">
-                <img 
-                  src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
-                  alt="Grupo Celdan Facilities" 
-                  className="h-6 w-6 sm:h-8 sm:w-8 rounded shrink-0"
-                />
-                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-800 truncate">
-                  {title}
-                </h1>
-              </div>
+            </div>
+
+            {/* Logo and Title - mobile: col-span-6, desktop: col-span-8 */}
+            <div className="col-span-6 sm:col-span-8 flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
+              <img 
+                src="/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png" 
+                alt="Logo" 
+                className="h-6 w-6 sm:h-8 sm:w-8 rounded flex-shrink-0"
+              />
+              <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-slate-800 truncate">
+                {title}
+              </h1>
             </div>
             
-            <div className="flex items-center gap-1 shrink-0">
+            {/* Action buttons - mobile: col-span-4, desktop: col-span-3 */}
+            <div className="col-span-4 sm:col-span-3 flex items-center justify-end gap-1 sm:gap-2">
+              {/* Install button - only desktop */}
               {isInstallable && (
                 <Button 
                   onClick={handleInstall}
@@ -79,49 +84,54 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
                   size="sm"
                 >
                   <Download className="h-4 w-4" />
-                  Instalar App
+                  Instalar
                 </Button>
               )}
               
+              {/* Copy link button */}
               <Button 
                 onClick={copyVigilanteLink}
                 variant="outline"
-                className="flex items-center gap-1 px-2 sm:px-3"
+                className="p-2 sm:px-3"
                 size="sm"
+                title="Copiar Link do Vigilante"
               >
-                <Copy className="h-4 w-4" />
-                <span className="hidden md:inline">Copiar Link</span>
+                <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden lg:inline ml-1">Link</span>
               </Button>
               
+              {/* Vigilante area button */}
               <Button 
                 onClick={() => window.location.href = '/vigilante-checklist'}
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-1 px-2 sm:px-3"
+                className="bg-green-600 hover:bg-green-700 p-2 sm:px-3"
                 size="sm"
+                title="Área do Vigilante"
               >
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Área do Vigilante</span>
-                <span className="sm:hidden">Vigilante</span>
+                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-1">Vigilante</span>
               </Button>
               
+              {/* Logout button */}
               <Button 
                 onClick={handleLogout}
                 variant="outline"
-                className="flex items-center gap-1 px-2 sm:px-3"
+                className="p-2 sm:px-3"
                 size="sm"
+                title="Sair"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden md:inline">Sair</span>
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden lg:inline ml-1">Sair</span>
               </Button>
             </div>
           </div>
         </div>
-      </div>
+      </header>
       
-      <div className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6">
+      <main className="w-full px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6">
         <div className="fade-in">
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
