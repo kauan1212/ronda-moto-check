@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, Car, CheckSquare, Image, UserCog } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Building2, Users, Car, CheckSquare, Image, UserCog, ArrowLeft } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import VigilanteManagement from '@/components/VigilanteManagement';
 import MotorcycleManagement from '@/components/MotorcycleManagement';
@@ -12,9 +14,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const AdminPanel = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [selectedCondominiumId, setSelectedCondominiumId] = useState<string>('');
 
   const { data: condominiums = [], isLoading: condominiumsLoading, refetch: refetchCondominiums } = useQuery({
@@ -124,10 +128,27 @@ const AdminPanel = () => {
     setSelectedCondominiumId(condominium.id);
   };
 
+  const handleBack = () => {
+    navigate('/');
+  };
+
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold">Painel Administrativo</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {user?.email === 'kauankg@hotmail.com' && (
+            <Button 
+              onClick={handleBack}
+              variant="outline" 
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Voltar</span>
+            </Button>
+          )}
+          <h1 className="text-2xl sm:text-3xl font-bold">Painel Administrativo</h1>
+        </div>
       </div>
 
       <CondominiumSelector
@@ -138,35 +159,35 @@ const AdminPanel = () => {
       />
 
       <Tabs defaultValue="condominiums" className="space-y-4 sm:space-y-6">
-        <div className="overflow-x-auto">
-          <TabsList className="grid w-full grid-cols-6 min-w-max">
-            <TabsTrigger value="condominiums" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="grid w-full grid-cols-6 min-w-max gap-1">
+            <TabsTrigger value="condominiums" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Condomínios</span>
               <span className="sm:hidden">Cond.</span>
             </TabsTrigger>
-            <TabsTrigger value="vigilantes" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger value="vigilantes" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Vigilantes</span>
               <span className="sm:hidden">Vigil.</span>
             </TabsTrigger>
-            <TabsTrigger value="motorcycles" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <Car className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger value="motorcycles" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <Car className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Veículos</span>
               <span className="sm:hidden">Veíc.</span>
             </TabsTrigger>
-            <TabsTrigger value="checklists" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger value="checklists" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Checklists</span>
               <span className="sm:hidden">Check.</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <UserCog className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <UserCog className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               <span className="hidden sm:inline">Usuários</span>
               <span className="sm:hidden">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="logo" className="flex items-center gap-2 text-xs sm:text-sm px-2 sm:px-4">
-              <Image className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsTrigger value="logo" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
+              <Image className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
               Logo
             </TabsTrigger>
           </TabsList>

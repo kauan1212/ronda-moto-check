@@ -1,9 +1,9 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Condominium } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useCondominiumOperations } from '@/hooks/useCondominiumOperations';
+import { supabase } from '@/integrations/supabase/client';
 import CondominiumHeader from '@/components/condominium/CondominiumHeader';
 import CondominiumCard from '@/components/condominium/CondominiumCard';
 import CondominiumDialog from '@/components/condominium/CondominiumDialog';
@@ -15,40 +15,59 @@ interface CondominiumManagementProps {
 
 const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: condominiumLoading, fetchCondominiums, refreshCondominiums, saveCondominium, deleteCondominium } = useCondominiumOperations();
+  const { loading: condominiumLoading, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Auto-refresh que executa apenas uma vez ao acessar a página
   useEffect(() => {
     const loadCondominiums = async () => {
-      if (!user?.id) {
-        console.log('🚫 Usuário não encontrado, limpando condomínios...');
-        setCondominiums([]);
+      if (!user?.id || dataLoaded) {
         return;
       }
 
       try {
         console.log('🔄 Carregando condomínios automaticamente...');
-        const data = await fetchCondominiums();
+        const { data, error } = await supabase
+          .from('condominiums')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name');
+
+        if (error) {
+          console.error('❌ Erro ao carregar condomínios:', error);
+          return;
+        }
+
         console.log('📋 Condomínios carregados:', data.length, 'itens');
         setCondominiums(data);
+        setDataLoaded(true);
       } catch (error) {
         console.error('❌ Erro ao carregar condomínios:', error);
       }
     };
 
-    // Só executa o carregamento se não estiver mais carregando auth e tiver usuário
-    if (!authLoading && user?.id) {
+    if (!authLoading && user?.id && !dataLoaded) {
       loadCondominiums();
     }
-  }, [authLoading, user?.id]); // Removido fetchCondominiums das dependências
+  }, [authLoading, user?.id, dataLoaded]);
 
   const handleRefresh = async () => {
     console.log('🔄 Refresh manual acionado...');
     try {
-      const data = await refreshCondominiums();
+      const { data, error } = await supabase
+        .from('condominiums')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+
+      if (error) {
+        console.error('❌ Erro no refresh manual:', error);
+        return;
+      }
+
       console.log('📋 Condomínios atualizados:', data.length, 'itens');
       setCondominiums(data);
     } catch (error) {
@@ -62,8 +81,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
       setEditingCondominium(null);
       setDialogOpen(false);
       // Recarrega a lista após salvar
-      const data = await fetchCondominiums();
-      setCondominiums(data);
+      await handleRefresh();
     }
     return success;
   };
@@ -80,8 +98,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
     const success = await deleteCondominium(condominium);
     if (success) {
       // Recarrega a lista após deletar
-      const data = await fetchCondominiums();
-      setCondominiums(data);
+      await handleRefresh();
     }
   };
 
@@ -150,4 +167,3 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
 };
 
 export default CondominiumManagement;
-

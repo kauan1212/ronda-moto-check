@@ -22,14 +22,69 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getCategoryLabel = (url: string, index: number) => {
-  // Try to determine category from the photo order or URL
-  // Since we're working with motorcycle_photos array, we'll use a simple mapping
-  const categories = ['Frente', 'Trás', 'Lateral Esquerda', 'Lateral Direita'];
-  return categories[index % 4] || `Foto ${index + 1}`;
+const loadImageAsBase64 = async (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!url || typeof url !== 'string') {
+      reject('URL inválida');
+      return;
+    }
+
+    // Se já é base64, retorna direto
+    if (url.startsWith('data:')) {
+      resolve(url);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject('Erro ao criar contexto do canvas');
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(base64);
+      } catch (error) {
+        console.error('Erro ao converter imagem:', error);
+        reject('Erro ao processar imagem');
+      }
+    };
+    
+    img.onerror = () => {
+      console.error('Erro ao carregar imagem:', url);
+      reject('Erro ao carregar imagem');
+    };
+    
+    img.src = url;
+  });
 };
 
-export const generatePDF = (checklistData: Checklist) => {
+const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number, width: number, height: number) => {
+  try {
+    const base64Image = await loadImageAsBase64(imageUrl);
+    pdf.addImage(base64Image, 'JPEG', x, y, width, height);
+    return true;
+  } catch (error) {
+    console.error('Erro ao adicionar imagem ao PDF:', error);
+    pdf.setFontSize(8);
+    pdf.setTextColor('#ef4444');
+    pdf.text('Erro ao carregar foto', x, y + height / 2);
+    pdf.setTextColor('#000000');
+    return false;
+  }
+};
+
+export const generatePDF = async (checklistData: Checklist) => {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -109,7 +164,7 @@ export const generatePDF = (checklistData: Checklist) => {
     pdf.setFont('helvetica', 'bold');
     pdf.text(item.label, margin, yPos);
     
-    // Status with color and larger font
+    // Status with color
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     const statusText = getStatusLabel(status);
@@ -131,7 +186,7 @@ export const generatePDF = (checklistData: Checklist) => {
     yPos += 5;
   });
 
-  // Photos section - Show actual photos
+  // Photos section
   if (yPos > pageHeight - 60) {
     pdf.addPage();
     yPos = 20;
@@ -147,7 +202,7 @@ export const generatePDF = (checklistData: Checklist) => {
   if (vehiclePhotos.length > 0) {
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Fotos do Veículo:', margin, yPos);
+    pdf.text(`Fotos do Veículo (${vehiclePhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
     const photoWidth = 70;
@@ -155,7 +210,9 @@ export const generatePDF = (checklistData: Checklist) => {
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
-    vehiclePhotos.forEach((photoUrl: string, index: number) => {
+    for (let i = 0; i < vehiclePhotos.length; i++) {
+      const photoUrl = vehiclePhotos[i];
+      
       if (yPos > pageHeight - 70) {
         pdf.addPage();
         yPos = 20;
@@ -164,28 +221,19 @@ export const generatePDF = (checklistData: Checklist) => {
 
       const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 15);
       
-      try {
-        // Add category label
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(getCategoryLabel(photoUrl, index), xPos, yPos - 2);
-        
-        // Add the actual photo
-        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
-        
-      } catch (error) {
-        console.error('Erro ao adicionar foto do veículo:', error);
-        pdf.setFontSize(8);
-        pdf.setTextColor('#ef4444');
-        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
-        pdf.setTextColor('#000000');
-      }
+      // Add category label
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      const categories = ['Frente', 'Trás', 'Lateral Esquerda', 'Lateral Direita', 'Adicional'];
+      pdf.text(categories[i % 5] || `Foto ${i + 1}`, xPos, yPos - 2);
+      
+      await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
         yPos += photoHeight + 20;
       }
-    });
+    }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
       yPos += photoHeight + 20;
@@ -202,7 +250,7 @@ export const generatePDF = (checklistData: Checklist) => {
 
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Fotos do Combustível:', margin, yPos);
+    pdf.text(`Fotos do Combustível (${fuelPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
     const photoWidth = 60;
@@ -210,7 +258,7 @@ export const generatePDF = (checklistData: Checklist) => {
     const photosPerRow = 3;
     let currentPhotoIndex = 0;
 
-    fuelPhotos.forEach((photoUrl: string) => {
+    for (const photoUrl of fuelPhotos) {
       if (yPos > pageHeight - 60) {
         pdf.addPage();
         yPos = 20;
@@ -218,22 +266,13 @@ export const generatePDF = (checklistData: Checklist) => {
       }
 
       const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
-      
-      try {
-        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
-      } catch (error) {
-        console.error('Erro ao adicionar foto do combustível:', error);
-        pdf.setFontSize(8);
-        pdf.setTextColor('#ef4444');
-        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
-        pdf.setTextColor('#000000');
-      }
+      await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
         yPos += photoHeight + 15;
       }
-    });
+    }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
       yPos += photoHeight + 15;
@@ -250,7 +289,7 @@ export const generatePDF = (checklistData: Checklist) => {
 
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Fotos do Odômetro:', margin, yPos);
+    pdf.text(`Fotos do Odômetro (${kmPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
     const photoWidth = 60;
@@ -258,7 +297,7 @@ export const generatePDF = (checklistData: Checklist) => {
     const photosPerRow = 3;
     let currentPhotoIndex = 0;
 
-    kmPhotos.forEach((photoUrl: string) => {
+    for (const photoUrl of kmPhotos) {
       if (yPos > pageHeight - 60) {
         pdf.addPage();
         yPos = 20;
@@ -266,22 +305,13 @@ export const generatePDF = (checklistData: Checklist) => {
       }
 
       const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 10);
-      
-      try {
-        pdf.addImage(photoUrl, 'JPEG', xPos, yPos, photoWidth, photoHeight);
-      } catch (error) {
-        console.error('Erro ao adicionar foto do odômetro:', error);
-        pdf.setFontSize(8);
-        pdf.setTextColor('#ef4444');
-        pdf.text('Erro ao carregar foto', xPos, yPos + photoHeight / 2);
-        pdf.setTextColor('#000000');
-      }
+      await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
 
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
         yPos += photoHeight + 15;
       }
-    });
+    }
 
     if (currentPhotoIndex % photosPerRow !== 0) {
       yPos += photoHeight + 15;
@@ -300,17 +330,8 @@ export const generatePDF = (checklistData: Checklist) => {
     pdf.text('Foto Facial:', margin, yPos);
     yPos += 10;
 
-    try {
-      pdf.addImage(checklistData.face_photo, 'JPEG', margin, yPos, 60, 45);
-      yPos += 50;
-    } catch (error) {
-      console.error('Erro ao adicionar foto facial:', error);
-      pdf.setFontSize(10);
-      pdf.setTextColor('#ef4444');
-      pdf.text('Erro ao carregar foto facial', margin, yPos);
-      pdf.setTextColor('#000000');
-      yPos += 15;
-    }
+    await addImageToPDF(pdf, checklistData.face_photo, margin, yPos, 60, 45);
+    yPos += 50;
   }
 
   // Observations
@@ -363,13 +384,7 @@ export const generatePDF = (checklistData: Checklist) => {
     pdf.text('ASSINATURA', margin, yPos);
     yPos += 10;
 
-    try {
-      pdf.addImage(checklistData.signature, 'PNG', margin, yPos, 80, 40);
-    } catch (error) {
-      console.error('Erro ao adicionar assinatura:', error);
-      pdf.setFontSize(10);
-      pdf.text('Erro ao carregar assinatura', margin, yPos);
-    }
+    await addImageToPDF(pdf, checklistData.signature, margin, yPos, 80, 40);
     
     yPos += 45;
     pdf.setFontSize(10);
@@ -377,7 +392,7 @@ export const generatePDF = (checklistData: Checklist) => {
     pdf.text(`Data: ${dateStr} às ${timeStr}`, margin, yPos + 6);
   }
 
-  // Save the PDF
+  // Save the PDF - força download
   const fileName = `checklist-${checklistData.motorcycle_plate}-${dateStr.replace(/\//g, '-')}.pdf`;
   pdf.save(fileName);
 };

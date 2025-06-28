@@ -64,6 +64,13 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+  
+  html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
   
   body {
@@ -73,12 +80,9 @@
     -moz-osx-font-smoothing: grayscale;
     touch-action: manipulation;
     overscroll-behavior: none;
-  }
-
-  /* Mobile optimizations */
-  html {
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
   }
 
   /* Prevent zoom on input focus (iOS) */
@@ -92,13 +96,58 @@
     font-size: 16px;
   }
 
-  /* Touch targets */
+  /* Touch targets - improved for mobile */
   button,
   input[type="button"],
   input[type="submit"],
   a {
     min-height: 44px;
     min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Mobile container improvements */
+  .container {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1536px;
+    }
   }
 
   /* PWA specific styles */
@@ -164,12 +213,17 @@
   /* Form improvements for mobile */
   .form-input {
     @apply appearance-none rounded-lg border border-gray-300 px-3 py-2 text-base leading-tight focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* Button improvements */
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 active:bg-primary/80;
     transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Card improvements */
@@ -180,14 +234,54 @@
   /* Mobile responsive typography */
   @media (max-width: 640px) {
     h1 {
-      @apply text-2xl;
+      @apply text-xl;
+      line-height: 1.4;
     }
     h2 {
-      @apply text-xl;
+      @apply text-lg;
+      line-height: 1.4;
     }
     h3 {
-      @apply text-lg;
+      @apply text-base;
+      line-height: 1.4;
     }
+    
+    /* Prevent text overflow on mobile */
+    p, span, div {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+  }
+
+  /* Tab improvements for mobile */
+  [role="tablist"] {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  [role="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Grid responsive improvements */
+  .grid {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* Flex improvements for mobile */
+  .flex {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .flex-nowrap {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Animations */
@@ -218,12 +312,58 @@
       transform: translateY(0);
     }
   }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 768px) {
+    /* Ensure buttons are properly sized on mobile */
+    button {
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+    
+    /* Improve dialog/modal on mobile */
+    [role="dialog"] {
+      margin: 1rem;
+      max-width: calc(100vw - 2rem);
+      max-height: calc(100vh - 2rem);
+    }
+    
+    /* Better spacing for cards on mobile */
+    .card {
+      margin: 0.5rem 0;
+      padding: 1rem;
+    }
+    
+    /* Responsive table handling */
+    table {
+      font-size: 0.875rem;
+    }
+    
+    /* Form spacing on mobile */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    /* Better image handling on mobile */
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - thinner on mobile */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
+}
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 }
 
 ::-webkit-scrollbar-track {
