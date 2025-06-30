@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -45,7 +46,8 @@ const UserManagement = () => {
     await updateUserMutation.mutateAsync({
       userId: editingUser.id,
       fullName: formData.fullName,
-      isAdmin: formData.isAdmin
+      isAdmin: formData.isAdmin,
+      newPassword: formData.newPassword
     });
     setIsEditDialogOpen(false);
     setEditingUser(null);
@@ -66,7 +68,9 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    deleteUserMutation.mutate(userId);
+    if (window.confirm('Tem certeza que deseja deletar este usuário? Esta ação não pode ser desfeita.')) {
+      deleteUserMutation.mutate(userId);
+    }
   };
 
   const handleResetPassword = (userId: string, email: string) => {
@@ -130,7 +134,7 @@ const UserManagement = () => {
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Atualize as informações do usuário
+              Atualize as informações do usuário. Preencha o campo de nova senha apenas se desejar alterá-la.
             </DialogDescription>
           </DialogHeader>
           

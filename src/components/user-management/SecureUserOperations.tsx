@@ -52,9 +52,16 @@ export const useSecureUserOperations = () => {
         }
       });
 
+      console.log('Edge function response:', response);
+
       if (response.error) {
         console.error('Edge function error:', response.error);
         throw new Error(response.error.message || 'Failed to create user');
+      }
+
+      if (!response.data?.success) {
+        console.error('Edge function returned failure:', response.data);
+        throw new Error(response.data?.error || 'Failed to create user');
       }
 
       return response.data;
@@ -69,9 +76,55 @@ export const useSecureUserOperations = () => {
     }
   });
 
+  // Enhanced update user with password support
+  const updateUserMutation = useMutation({
+    mutationFn: async (userData: UpdateUserData & { newPassword?: string }) => {
+      console.log('Updating user via Edge Function');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
+      }
+
+      const response = await supabase.functions.invoke('admin-user-operations', {
+        body: {
+          action: 'update_user',
+          userId: userData.userId,
+          fullName: userData.fullName,
+          isAdmin: userData.isAdmin,
+          newPassword: userData.newPassword
+        }
+      });
+
+      console.log('Update user response:', response);
+
+      if (response.error) {
+        console.error('Edge function error:', response.error);
+        throw new Error(response.error.message || 'Failed to update user');
+      }
+
+      if (!response.data?.success) {
+        console.error('Edge function returned failure:', response.data);
+        throw new Error(response.data?.error || 'Failed to update user');
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Usuário atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      console.error('Error updating user:', error);
+      toast.error(`Erro ao atualizar usuário: ${error.message}`);
+    }
+  });
+
   // Admin password reset mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      console.log('Resetting password via Edge Function');
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No authentication session');
@@ -85,9 +138,16 @@ export const useSecureUserOperations = () => {
         }
       });
 
+      console.log('Reset password response:', response);
+
       if (response.error) {
         console.error('Reset password error:', response.error);
         throw new Error(response.error.message || 'Failed to reset password');
+      }
+
+      if (!response.data?.success) {
+        console.error('Edge function returned failure:', response.data);
+        throw new Error(response.data?.error || 'Failed to reset password');
       }
 
       return response.data;
@@ -98,65 +158,6 @@ export const useSecureUserOperations = () => {
     onError: (error: any) => {
       console.error('Error resetting password:', error);
       toast.error(`Erro ao enviar email de recuperação: ${error.message}`);
-    }
-  });
-
-  // Atualizar usuário existente
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, fullName, isAdmin }: UpdateUserData) => {
-      console.log('Updating user:', { userId, fullName, isAdmin });
-      
-      // Atualizar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          full_name: fullName,
-          is_admin: isAdmin 
-        })
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-        throw profileError;
-      }
-
-      // Gerenciar roles
-      if (isAdmin) {
-        // Inserir role admin se não existir
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: userId,
-            role: 'admin'
-          });
-
-        if (roleError) {
-          console.error('Role upsert error:', roleError);
-          throw roleError;
-        }
-      } else {
-        // Remover role admin se existir
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId)
-          .eq('role', 'admin');
-
-        if (roleError) {
-          console.error('Role deletion error:', roleError);
-          throw roleError;
-        }
-      }
-
-      return { userId, fullName, isAdmin };
-    },
-    onSuccess: () => {
-      toast.success('Usuário atualizado com sucesso!');
-      refetch();
-    },
-    onError: (error: any) => {
-      console.error('Error updating user:', error);
-      toast.error(`Erro ao atualizar usuário: ${error.message}`);
     }
   });
 
@@ -241,7 +242,7 @@ export const useSecureUserOperations = () => {
     },
     onSuccess: () => {
       toast.success('Usuário descongelado com sucesso!');
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
       console.error('Error unfreezing user:', error);
@@ -285,7 +286,7 @@ export const useSecureUserOperations = () => {
     },
     onSuccess: () => {
       toast.success('Usuário deletado com sucesso!');
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
       console.error('Error deleting user:', error);

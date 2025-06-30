@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Mail, User, Calendar, Edit } from 'lucide-react';
+import { Trash2, Mail, User, Calendar, Edit, Key } from 'lucide-react';
 import { UserProfile } from './types';
 import AccountStatusManager from './AccountStatusManager';
 
@@ -15,8 +15,10 @@ interface UserListProps {
   onApprove: (userId: string) => void;
   onFreeze: (userId: string) => void;
   onUnfreeze: (userId: string) => void;
+  onResetPassword: (userId: string, email: string) => void;
   deleteLoading?: boolean;
   statusLoading?: boolean;
+  resetPasswordLoading?: boolean;
 }
 
 const UserList: React.FC<UserListProps> = ({
@@ -26,12 +28,20 @@ const UserList: React.FC<UserListProps> = ({
   onApprove,
   onFreeze,
   onUnfreeze,
+  onResetPassword,
   deleteLoading = false,
-  statusLoading = false
+  statusLoading = false,
+  resetPasswordLoading = false
 }) => {
   const handleDelete = (userId: string) => {
     if (window.confirm('Tem certeza que deseja deletar este usuário? Esta ação não pode ser desfeita.')) {
       onDelete(userId);
+    }
+  };
+
+  const handleResetPassword = (userId: string, email: string) => {
+    if (window.confirm(`Tem certeza que deseja enviar um email de recuperação de senha para ${email}?`)) {
+      onResetPassword(userId, email);
     }
   };
 
@@ -154,6 +164,16 @@ const UserList: React.FC<UserListProps> = ({
                         Editar
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetPassword(user.id, user.email)}
+                        disabled={resetPasswordLoading}
+                        className="flex items-center gap-1"
+                      >
+                        <Key className="h-4 w-4" />
+                        Reset Senha
+                      </Button>
+                      <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(user.id)}
@@ -216,13 +236,25 @@ const UserList: React.FC<UserListProps> = ({
                       {user.frozen_at ? new Date(user.frozen_at).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <AccountStatusManager
-                        user={user}
-                        onApprove={onApprove}
-                        onFreeze={onFreeze}
-                        onUnfreeze={onUnfreeze}
-                        loading={statusLoading}
-                      />
+                      <div className="flex gap-2 justify-end">
+                        <AccountStatusManager
+                          user={user}
+                          onApprove={onApprove}
+                          onFreeze={onFreeze}
+                          onUnfreeze={onUnfreeze}
+                          loading={statusLoading}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResetPassword(user.id, user.email)}
+                          disabled={resetPasswordLoading}
+                          className="flex items-center gap-1"
+                        >
+                          <Key className="h-4 w-4" />
+                          Reset Senha
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

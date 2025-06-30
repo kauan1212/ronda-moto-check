@@ -136,11 +136,14 @@ const AdminPanel = () => {
 
   const handleBack = async () => {
     try {
+      console.log('AdminPanel: Signing out user...');
       await signOut();
-      window.location.href = '/';
+      console.log('AdminPanel: User signed out, navigating to home...');
+      navigate('/');
     } catch (error) {
-      console.error('Error signing out:', error);
-      window.location.href = '/';
+      console.error('AdminPanel: Error signing out:', error);
+      // Fallback navigation even if signout fails
+      navigate('/');
     }
   };
 

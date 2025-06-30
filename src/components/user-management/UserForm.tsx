@@ -25,6 +25,8 @@ const UserForm: React.FC<UserFormProps> = ({
     fullName: user?.full_name || '',
     email: user?.email || '',
     password: '',
+    newPassword: '',
+    confirmPassword: '',
     isAdmin: user?.is_admin || false
   });
   const [error, setError] = useState('');
@@ -34,7 +36,17 @@ const UserForm: React.FC<UserFormProps> = ({
     setError('');
 
     if (!formData.fullName || (!isEdit && (!formData.email || !formData.password))) {
-      setError('Todos os campos são obrigatórios');
+      setError('Todos os campos obrigatórios devem ser preenchidos');
+      return;
+    }
+
+    if (isEdit && formData.newPassword && formData.newPassword !== formData.confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    if (isEdit && formData.newPassword && formData.newPassword.length < 6) {
+      setError('A nova senha deve ter pelo menos 6 caracteres');
       return;
     }
 
@@ -54,7 +66,7 @@ const UserForm: React.FC<UserFormProps> = ({
       )}
       
       <div className="space-y-2">
-        <Label htmlFor="fullName">Nome Completo</Label>
+        <Label htmlFor="fullName">Nome Completo *</Label>
         <Input
           id="fullName"
           value={formData.fullName}
@@ -65,7 +77,7 @@ const UserForm: React.FC<UserFormProps> = ({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email *</Label>
         <Input
           id="email"
           type="email"
@@ -83,7 +95,7 @@ const UserForm: React.FC<UserFormProps> = ({
       
       {!isEdit && (
         <div className="space-y-2">
-          <Label htmlFor="password">Senha</Label>
+          <Label htmlFor="password">Senha *</Label>
           <Input
             id="password"
             type="password"
@@ -94,6 +106,36 @@ const UserForm: React.FC<UserFormProps> = ({
             required
           />
         </div>
+      )}
+
+      {isEdit && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">Nova Senha (opcional)</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={formData.newPassword}
+              onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
+              placeholder="Deixe em branco para manter a senha atual"
+              minLength={6}
+            />
+          </div>
+          
+          {formData.newPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Nova Senha *</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Confirme a nova senha"
+                required
+              />
+            </div>
+          )}
+        </>
       )}
       
       <div className="flex items-center space-x-2">
@@ -113,6 +155,7 @@ const UserForm: React.FC<UserFormProps> = ({
           variant="outline"
           onClick={onCancel}
           className="flex-1"
+          disabled={loading}
         >
           Cancelar
         </Button>
