@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,19 +8,21 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useSecureAuth } from '@/hooks/useSecureAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useRateLimit } from '@/hooks/useRateLimit';
 import { sanitizeInput } from '@/utils/inputSanitizer';
 import PasswordRecovery from '@/components/auth/PasswordRecovery';
 
 const SecureLoginPage = () => {
-  const { user, loading } = useSecureAuth();
+  const { user, loading } = useAuth();
   const { isBlocked, checkRateLimit, recordAttempt, getRemainingTime } = useRateLimit('login', 5, 15 * 60 * 1000);
   
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', confirmPassword: '', fullName: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
+
+  console.log('🔐 SecureLoginPage state:', { user: user?.email, loading });
 
   if (loading) {
     return (
@@ -30,6 +33,7 @@ const SecureLoginPage = () => {
   }
 
   if (user) {
+    console.log('✅ SecureLoginPage: User authenticated, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
@@ -44,6 +48,8 @@ const SecureLoginPage = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🔐 SecureLoginPage: Login attempt for:', loginData.email);
+    
     if (!checkRateLimit()) {
       const remaining = getRemainingTime();
       toast.error(`Muitas tentativas de login. Tente novamente em ${Math.ceil(remaining / 60)} minutos.`);
@@ -56,12 +62,15 @@ const SecureLoginPage = () => {
       const sanitizedEmail = sanitizeInput(loginData.email);
       const sanitizedPassword = loginData.password; // Don't sanitize passwords
 
+      console.log('🔐 SecureLoginPage: Attempting login with sanitized email');
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: sanitizedEmail,
         password: sanitizedPassword,
       });
 
       if (error) {
+        console.error('❌ SecureLoginPage: Login error:', error);
         recordAttempt(false);
         
         if (error.message.includes('Invalid login credentials')) {
@@ -75,33 +84,51 @@ const SecureLoginPage = () => {
       }
 
       if (data.user) {
-        // Check account status
-        const { data: profile } = await supabase
+        console.log('✅ SecureLoginPage: Login successful, checking account status');
+        
+        // Check account status with timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile check timeout')), 5000)
+        );
+
+        const profilePromise = supabase
           .from('profiles')
           .select('account_status')
           .eq('id', data.user.id)
           .single();
 
-        if (profile?.account_status === 'pending') {
-          await supabase.auth.signOut();
-          toast.error('Sua conta está pendente de aprovação pelo administrador.');
-          recordAttempt(false);
-          return;
-        }
+        try {
+          const { data: profile } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
-        if (profile?.account_status === 'frozen') {
-          await supabase.auth.signOut();
-          toast.error('Sua conta foi congelada. Entre em contato com o administrador.');
-          recordAttempt(false);
-          return;
-        }
+          if (profile?.account_status === 'pending') {
+            console.log('⏳ SecureLoginPage: Account pending');
+            await supabase.auth.signOut();
+            toast.error('Sua conta está pendente de aprovação pelo administrador.');
+            recordAttempt(false);
+            return;
+          }
 
-        recordAttempt(true);
-        toast.success('Login realizado com sucesso!');
+          if (profile?.account_status === 'frozen') {
+            console.log('🧊 SecureLoginPage: Account frozen');
+            await supabase.auth.signOut();
+            toast.error('Sua conta foi congelada. Entre em contato com o administrador.');
+            recordAttempt(false);
+            return;
+          }
+
+          console.log('✅ SecureLoginPage: Account status check passed');
+          recordAttempt(true);
+          toast.success('Login realizado com sucesso!');
+        } catch (statusError) {
+          console.error('⚠️ SecureLoginPage: Error checking account status:', statusError);
+          // Allow login to proceed even if status check fails
+          recordAttempt(true);
+          toast.success('Login realizado com sucesso!');
+        }
       }
     } catch (error) {
       recordAttempt(false);
-      console.error('Login error:', error);
+      console.error('💥 SecureLoginPage: Unexpected login error:', error);
       toast.error('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -110,6 +137,8 @@ const SecureLoginPage = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('📝 SecureLoginPage: Signup attempt for:', signupData.email);
 
     if (signupData.password !== signupData.confirmPassword) {
       toast.error('As senhas não coincidem.');
@@ -132,6 +161,8 @@ const SecureLoginPage = () => {
 
       const redirectUrl = `${window.location.origin}/`;
       
+      console.log('📝 SecureLoginPage: Creating account with sanitized data');
+
       const { error } = await supabase.auth.signUp({
         email: sanitizedData.email,
         password: sanitizedData.password,
@@ -144,6 +175,7 @@ const SecureLoginPage = () => {
       });
 
       if (error) {
+        console.error('❌ SecureLoginPage: Signup error:', error);
         if (error.message.includes('already registered')) {
           toast.error('Este email já está registrado. Tente fazer login.');
         } else {
@@ -152,10 +184,11 @@ const SecureLoginPage = () => {
         return;
       }
 
+      console.log('✅ SecureLoginPage: Signup successful');
       toast.success('Conta criada! Verifique seu email e aguarde aprovação do administrador.');
       setSignupData({ email: '', password: '', confirmPassword: '', fullName: '' });
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('💥 SecureLoginPage: Unexpected signup error:', error);
       toast.error('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
