@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { authCache } from '@/utils/authCache';
 
 export interface AuthState {
   user: User | null;
@@ -20,19 +21,17 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
-    let isUpdating = false;
     let timeoutId: NodeJS.Timeout;
 
     console.log('🔄 useAuth: Starting auth initialization');
 
-    // Function to update auth state with timeout protection
+    // Function to update auth state with better error handling
     const updateAuthState = async (session: Session | null) => {
-      if (!mounted || isUpdating) {
-        console.log('⚠️ useAuth: Skipping update - mounted:', mounted, 'isUpdating:', isUpdating);
+      if (!mounted) {
+        console.log('⚠️ useAuth: Component unmounted, skipping update');
         return;
       }
       
-      isUpdating = true;
       console.log('🔄 useAuth: Updating auth state for user:', session?.user?.email || 'no user');
 
       // Clear any existing timeout
@@ -40,109 +39,124 @@ export const useAuth = () => {
         clearTimeout(timeoutId);
       }
 
-      // Set a timeout to prevent infinite loading
-      timeoutId = setTimeout(() => {
-        console.error('⏰ useAuth: Profile check timeout - forcing loading to false');
-        if (mounted) {
-          setAuthState(prev => ({
-            ...prev,
-            loading: false,
-          }));
-        }
-        isUpdating = false;
-      }, 10000); // 10 second timeout
-      
       try {
         if (session?.user) {
           console.log('👤 useAuth: User found, checking profile status...');
           
-          // Verificar status da conta com retry
-          let retryCount = 0;
-          const maxRetries = 3;
-          let profile = null;
-          let profileError = null;
-
-          while (retryCount < maxRetries && !profile) {
-            try {
-              console.log(`📊 useAuth: Fetching profile (attempt ${retryCount + 1}/${maxRetries})`);
-              
-              const { data: profileData, error } = await supabase
-                .from('profiles')
-                .select('account_status, is_admin')
-                .eq('id', session.user.id)
-                .single();
-
-              if (error) {
-                console.error(`❌ useAuth: Profile error (attempt ${retryCount + 1}):`, error);
-                profileError = error;
-                retryCount++;
-                
-                if (retryCount < maxRetries) {
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-                }
-              } else {
-                profile = profileData;
-                console.log('✅ useAuth: Profile fetched successfully:', profile);
-                break;
-              }
-            } catch (fetchError) {
-              console.error(`🚨 useAuth: Fetch error (attempt ${retryCount + 1}):`, fetchError);
-              retryCount++;
-              
-              if (retryCount < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              }
-            }
-          }
-
-          // Clear timeout on successful completion
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-
-          if (profileError && !profile) {
-            console.error('💥 useAuth: Failed to fetch profile after retries, signing out');
-            await supabase.auth.signOut();
+          // Check cache first
+          const cachedProfile = authCache.get(session.user.id);
+          if (cachedProfile) {
+            console.log('✅ useAuth: Using cached profile data');
+            const isAdmin = session.user.email === 'kauankg@hotmail.com' || (cachedProfile?.is_admin || false);
+            
             if (mounted) {
               setAuthState({
-                user: null,
-                session: null,
+                user: session.user,
+                session,
                 loading: false,
-                isAdmin: false,
+                isAdmin,
               });
             }
-            isUpdating = false;
             return;
           }
 
-          // Se a conta não está ativa, fazer logout
-          if (profile && profile.account_status !== 'active') {
-            console.log('🚫 useAuth: Account not active, signing out:', profile.account_status);
-            await supabase.auth.signOut();
+          // Set a shorter timeout for profile check
+          timeoutId = setTimeout(() => {
+            console.log('⏰ useAuth: Profile check timeout, proceeding without profile data');
             if (mounted) {
+              // Just proceed with basic admin check based on email
+              const isAdmin = session.user.email === 'kauankg@hotmail.com';
               setAuthState({
-                user: null,
-                session: null,
+                user: session.user,
+                session,
                 loading: false,
-                isAdmin: false,
+                isAdmin,
               });
             }
-            isUpdating = false;
-            return;
-          }
-
-          // Check if user is admin
-          const isAdmin = session.user.email === 'kauankg@hotmail.com' || (profile?.is_admin || false);
-          console.log('👑 useAuth: Admin status:', isAdmin);
+          }, 5000); // Reduced to 5 seconds
           
-          if (mounted) {
-            console.log('✅ useAuth: Setting authenticated state');
-            setAuthState({
-              user: session.user,
-              session,
-              loading: false,
-              isAdmin,
-            });
+          try {
+            console.log('📊 useAuth: Fetching profile from database');
+            
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('account_status, is_admin')
+              .eq('id', session.user.id)
+              .single();
+
+            // Clear timeout on response
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+
+            if (error) {
+              console.error('❌ useAuth: Profile error, proceeding with email-based admin check:', error);
+              // Proceed with basic admin check if profile query fails
+              const isAdmin = session.user.email === 'kauankg@hotmail.com';
+              
+              if (mounted) {
+                setAuthState({
+                  user: session.user,
+                  session,
+                  loading: false,
+                  isAdmin,
+                });
+              }
+              return;
+            }
+
+            console.log('✅ useAuth: Profile fetched successfully:', profile);
+
+            // Cache the profile data
+            authCache.set(session.user.id, profile);
+
+            // Check account status
+            if (profile && profile.account_status !== 'active') {
+              console.log('🚫 useAuth: Account not active, signing out:', profile.account_status);
+              await supabase.auth.signOut();
+              if (mounted) {
+                setAuthState({
+                  user: null,
+                  session: null,
+                  loading: false,
+                  isAdmin: false,
+                });
+              }
+              return;
+            }
+
+            // Check if user is admin
+            const isAdmin = session.user.email === 'kauankg@hotmail.com' || (profile?.is_admin || false);
+            console.log('👑 useAuth: Admin status:', isAdmin);
+            
+            if (mounted) {
+              console.log('✅ useAuth: Setting authenticated state');
+              setAuthState({
+                user: session.user,
+                session,
+                loading: false,
+                isAdmin,
+              });
+            }
+          } catch (fetchError) {
+            console.error('🚨 useAuth: Fetch error, proceeding with email-based admin check:', fetchError);
+            
+            // Clear timeout
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
+            
+            // Proceed with basic admin check
+            const isAdmin = session.user.email === 'kauankg@hotmail.com';
+            
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                session,
+                loading: false,
+                isAdmin,
+              });
+            }
           }
         } else {
           console.log('🚪 useAuth: No user session, setting unauthenticated state');
@@ -174,8 +188,6 @@ export const useAuth = () => {
             loading: false,
           }));
         }
-      } finally {
-        isUpdating = false;
       }
     };
 
@@ -237,39 +249,6 @@ export const useAuth = () => {
       return { data, error };
     }
 
-    // Verificar status da conta após login bem-sucedido
-    if (data.user) {
-      console.log('✅ useAuth: Sign in successful, checking account status');
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('account_status')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('❌ useAuth: Error checking account status:', profileError);
-        return { data, error: profileError };
-      }
-
-      if (profile.account_status === 'pending') {
-        console.log('⏳ useAuth: Account pending approval');
-        await supabase.auth.signOut();
-        return { 
-          data: null, 
-          error: { message: 'Sua conta está pendente de aprovação pelo administrador.' }
-        };
-      }
-
-      if (profile.account_status === 'frozen') {
-        console.log('🧊 useAuth: Account frozen');
-        await supabase.auth.signOut();
-        return { 
-          data: null, 
-          error: { message: 'Sua conta foi congelada. Entre em contato com o administrador.' }
-        };
-      }
-    }
-
     console.log('✅ useAuth: Sign in completed successfully');
     return { data, error };
   };
@@ -295,6 +274,10 @@ export const useAuth = () => {
 
   const signOut = async () => {
     console.log('🚪 useAuth: Signing out');
+    // Clear cache on logout
+    if (authState.user) {
+      authCache.clear(authState.user.id);
+    }
     const { error } = await supabase.auth.signOut();
     return { error };
   };
@@ -303,6 +286,8 @@ export const useAuth = () => {
   const forceLogout = async () => {
     console.log('🚨 useAuth: Force logout initiated');
     try {
+      // Clear all cached data
+      authCache.clear();
       await supabase.auth.signOut();
       setAuthState({
         user: null,

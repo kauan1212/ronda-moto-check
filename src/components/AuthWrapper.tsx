@@ -12,12 +12,12 @@ const AuthWrapper = () => {
 
   console.log('🎭 AuthWrapper state:', { user: user?.email, loading, isAdmin });
 
-  // Show emergency button after 15 seconds of loading
+  // Show emergency button after 10 seconds of loading (reduced from 15)
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         setShowEmergencyButton(true);
-      }, 15000);
+      }, 10000);
 
       return () => clearTimeout(timer);
     } else {
@@ -35,12 +35,12 @@ const AuthWrapper = () => {
             className="h-16 w-16 object-contain animate-pulse"
           />
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <div className="text-lg text-gray-700">Carregando...</div>
+          <div className="text-lg text-gray-700">Verificando autenticação...</div>
           
           {showEmergencyButton && (
             <div className="mt-8 text-center space-y-4">
               <p className="text-sm text-gray-600">
-                O carregamento está demorando mais que o esperado.
+                A verificação está demorando mais que o esperado.
               </p>
               <Button 
                 onClick={forceLogout}
