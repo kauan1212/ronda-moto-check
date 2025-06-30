@@ -1,3 +1,4 @@
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,6 +27,77 @@ export const useSecureUserOperations = () => {
       
       console.log('Fetched users:', data?.length);
       return data as UserProfile[];
+    }
+  });
+
+  // Enhanced create user with secure Edge Function
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: CreateUserData) => {
+      const sanitizedData = sanitizeFormData(userData);
+      
+      console.log('Creating user via Edge Function');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
+      }
+
+      const response = await supabase.functions.invoke('admin-user-operations', {
+        body: {
+          action: 'create_user',
+          email: sanitizedData.email,
+          password: sanitizedData.password,
+          fullName: sanitizedData.fullName,
+          isAdmin: sanitizedData.isAdmin
+        }
+      });
+
+      if (response.error) {
+        console.error('Edge function error:', response.error);
+        throw new Error(response.error.message || 'Failed to create user');
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Usuário criado com sucesso! Conta pendente de aprovação.');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      console.error('Error creating user:', error);
+      toast.error(`Erro ao criar usuário: ${error.message}`);
+    }
+  });
+
+  // Admin password reset mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
+      }
+
+      const response = await supabase.functions.invoke('admin-user-operations', {
+        body: {
+          action: 'reset_password',
+          userId,
+          email
+        }
+      });
+
+      if (response.error) {
+        console.error('Reset password error:', response.error);
+        throw new Error(response.error.message || 'Failed to reset password');
+      }
+
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('Email de recuperação enviado com sucesso!');
+    },
+    onError: (error: any) => {
+      console.error('Error resetting password:', error);
+      toast.error(`Erro ao enviar email de recuperação: ${error.message}`);
     }
   });
 
@@ -85,94 +157,6 @@ export const useSecureUserOperations = () => {
     onError: (error: any) => {
       console.error('Error updating user:', error);
       toast.error(`Erro ao atualizar usuário: ${error.message}`);
-    }
-  });
-
-  // Deletar usuário
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      console.log('Deleting user:', userId);
-      
-      // Deletar roles primeiro
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (roleError) {
-        console.error('Role deletion error:', roleError);
-        throw roleError;
-      }
-
-      // Deletar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error('Profile deletion error:', profileError);
-        throw profileError;
-      }
-
-      // Deletar usuário do auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) {
-        console.error('Auth deletion error:', authError);
-        throw authError;
-      }
-    },
-    onSuccess: () => {
-      toast.success('Usuário deletado com sucesso!');
-      refetch();
-    },
-    onError: (error: any) => {
-      console.error('Error deleting user:', error);
-      toast.error(`Erro ao deletar usuário: ${error.message}`);
-    }
-  });
-
-  // Enhanced create user with secure Edge Function
-  const createUserMutation = useMutation({
-    mutationFn: async (userData: CreateUserData) => {
-      const sanitizedData = sanitizeFormData(userData);
-      
-      console.log('Creating user via Edge Function');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No authentication session');
-      }
-
-      const response = await fetch('/functions/v1/admin-user-operations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_user',
-          email: sanitizedData.email,
-          password: sanitizedData.password,
-          fullName: sanitizedData.fullName,
-          isAdmin: sanitizedData.isAdmin
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create user');
-      }
-
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast.success('Usuário criado com sucesso! Conta pendente de aprovação.');
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-    onError: (error: any) => {
-      console.error('Error creating user:', error);
-      toast.error(`Erro ao criar usuário: ${error.message}`);
     }
   });
 
@@ -265,40 +249,47 @@ export const useSecureUserOperations = () => {
     }
   });
 
-  // Admin password reset mutation
-  const resetPasswordMutation = useMutation({
-    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No authentication session');
+  // Deletar usuário
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('Deleting user:', userId);
+      
+      // Deletar roles primeiro
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (roleError) {
+        console.error('Role deletion error:', roleError);
+        throw roleError;
       }
 
-      const response = await fetch('/functions/v1/admin-user-operations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'reset_password',
-          userId,
-          email
-        }),
-      });
+      // Deletar perfil
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reset password');
+      if (profileError) {
+        console.error('Profile deletion error:', profileError);
+        throw profileError;
       }
 
-      return await response.json();
+      // Deletar usuário do auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.error('Auth deletion error:', authError);
+        throw authError;
+      }
     },
     onSuccess: () => {
-      toast.success('Email de recuperação enviado com sucesso!');
+      toast.success('Usuário deletado com sucesso!');
+      refetch();
     },
     onError: (error: any) => {
-      console.error('Error resetting password:', error);
-      toast.error(`Erro ao enviar email de recuperação: ${error.message}`);
+      console.error('Error deleting user:', error);
+      toast.error(`Erro ao deletar usuário: ${error.message}`);
     }
   });
 

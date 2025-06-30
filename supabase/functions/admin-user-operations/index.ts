@@ -51,6 +51,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
+      console.error('Auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -65,16 +66,23 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile?.is_admin) {
+      console.error('Profile check error:', profileError);
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { action } = await req.json();
+    // Parse request body
+    const requestBody = await req.json();
+    const { action } = requestBody;
+
+    console.log('Processing action:', action);
 
     if (action === 'create_user') {
-      const { email, password, fullName, isAdmin }: CreateUserRequest = await req.json();
+      const { email, password, fullName, isAdmin } = requestBody as CreateUserRequest;
+
+      console.log('Creating user with email:', email);
 
       // Create user with admin client
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -93,6 +101,8 @@ serve(async (req) => {
       }
 
       if (authData.user) {
+        console.log('User created, updating profile:', authData.user.id);
+
         // Update profile with admin status
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
@@ -125,13 +135,17 @@ serve(async (req) => {
         }
 
         // Log security event
-        await supabaseAdmin.from('security_audit').insert({
-          user_id: user.id,
-          target_user_id: authData.user.id,
-          action: 'user_created',
-          details: { email, is_admin: isAdmin },
-          user_agent: req.headers.get('user-agent')
-        });
+        try {
+          await supabaseAdmin.from('security_audit').insert({
+            user_id: user.id,
+            target_user_id: authData.user.id,
+            action: 'user_created',
+            details: { email, is_admin: isAdmin },
+            user_agent: req.headers.get('user-agent')
+          });
+        } catch (auditError) {
+          console.error('Audit log error:', auditError);
+        }
       }
 
       return new Response(
@@ -141,7 +155,9 @@ serve(async (req) => {
     }
 
     if (action === 'reset_password') {
-      const { userId, email }: ResetPasswordRequest = await req.json();
+      const { userId, email } = requestBody as ResetPasswordRequest;
+
+      console.log('Resetting password for user:', email);
 
       // Send password reset email
       const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
@@ -153,6 +169,7 @@ serve(async (req) => {
       });
 
       if (resetError) {
+        console.error('Reset password error:', resetError);
         return new Response(
           JSON.stringify({ error: resetError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -160,20 +177,24 @@ serve(async (req) => {
       }
 
       // Log the password reset request
-      await supabaseAdmin.from('password_resets').insert({
-        email,
-        requested_by: user.id,
-        request_type: 'admin_reset'
-      });
+      try {
+        await supabaseAdmin.from('password_resets').insert({
+          email,
+          requested_by: user.id,
+          request_type: 'admin_reset'
+        });
 
-      // Log security event
-      await supabaseAdmin.from('security_audit').insert({
-        user_id: user.id,
-        target_user_id: userId,
-        action: 'password_reset_requested',
-        details: { email },
-        user_agent: req.headers.get('user-agent')
-      });
+        // Log security event
+        await supabaseAdmin.from('security_audit').insert({
+          user_id: user.id,
+          target_user_id: userId,
+          action: 'password_reset_requested',
+          details: { email },
+          user_agent: req.headers.get('user-agent')
+        });
+      } catch (logError) {
+        console.error('Logging error:', logError);
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: 'Password reset email sent' }),
@@ -189,7 +210,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
