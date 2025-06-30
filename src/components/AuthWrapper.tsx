@@ -10,14 +10,12 @@ const AuthWrapper = () => {
   const { user, loading, isAdmin, forceLogout } = useAuth();
   const [showEmergencyButton, setShowEmergencyButton] = useState(false);
 
-  console.log('🎭 AuthWrapper state:', { user: user?.email, loading, isAdmin });
-
-  // Show emergency button after 10 seconds of loading (reduced from 15)
+  // Show emergency button after 5 seconds (much faster)
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         setShowEmergencyButton(true);
-      }, 10000);
+      }, 5000);
 
       return () => clearTimeout(timer);
     } else {
@@ -57,12 +55,8 @@ const AuthWrapper = () => {
   }
 
   if (!user) {
-    return <LoginPage onLoginSuccess={() => {
-      console.log('🎉 AuthWrapper: Login success callback triggered');
-    }} />;
+    return <LoginPage onLoginSuccess={() => {}} />;
   }
-
-  console.log('✅ AuthWrapper: User authenticated, showing dashboard for:', { email: user.email, isAdmin });
 
   if (isAdmin) {
     return <AdminPanel />;
