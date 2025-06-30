@@ -30,3 +30,16 @@ export interface AccountStatusData {
   status: 'active' | 'frozen';
   adminId: string;
 }
+
+export interface UserListProps {
+  users: UserProfile[];
+  onEdit: (user: UserProfile) => void;
+  onDelete: (userId: string) => void;
+  onApprove: (userId: string) => void;
+  onFreeze: (userId: string) => void;
+  onUnfreeze: (userId: string) => void;
+  onResetPassword: (userId: string, email: string) => void;
+  deleteLoading: boolean;
+  statusLoading: boolean;
+  resetPasswordLoading: boolean;
+}

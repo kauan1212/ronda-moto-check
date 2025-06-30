@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import { toast } from 'sonner';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { useRateLimit } from '@/hooks/useRateLimit';
 import { sanitizeInput } from '@/utils/inputSanitizer';
+import PasswordRecovery from '@/components/auth/PasswordRecovery';
 
 const SecureLoginPage = () => {
   const { user, loading } = useSecureAuth();
@@ -19,6 +19,7 @@ const SecureLoginPage = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', confirmPassword: '', fullName: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
 
   if (loading) {
     return (
@@ -30,6 +31,14 @@ const SecureLoginPage = () => {
 
   if (user) {
     return <Navigate to="/" replace />;
+  }
+
+  if (showPasswordRecovery) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+        <PasswordRecovery onBack={() => setShowPasswordRecovery(false)} />
+      </div>
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -200,6 +209,18 @@ const SecureLoginPage = () => {
                 >
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
+                
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setShowPasswordRecovery(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Esqueci minha senha
+                  </Button>
+                </div>
+
                 {isBlocked && (
                   <p className="text-sm text-red-600 text-center">
                     Muitas tentativas. Aguarde {Math.ceil(getRemainingTime() / 60)} minutos.

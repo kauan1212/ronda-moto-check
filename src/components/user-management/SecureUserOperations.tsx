@@ -132,54 +132,39 @@ export const useSecureUserOperations = () => {
     }
   });
 
-  // Enhanced create user with security logging
+  // Enhanced create user with secure Edge Function
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserData) => {
       const sanitizedData = sanitizeFormData(userData);
       
-      console.log('Creating user with sanitized data');
+      console.log('Creating user via Edge Function');
       
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: sanitizedData.email,
-        password: sanitizedData.password,
-        user_metadata: {
-          full_name: sanitizedData.fullName
-        },
-        email_confirm: true
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            is_admin: sanitizedData.isAdmin,
-            account_status: 'pending'
-          })
-          .eq('id', authData.user.id);
-
-        if (profileError) throw profileError;
-
-        if (sanitizedData.isAdmin) {
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: authData.user.id,
-              role: 'admin'
-            });
-
-          if (roleError) throw roleError;
-        }
-
-        // Log security event
-        await logSecurityEvent('user_created', authData.user.id, {
-          email: sanitizedData.email,
-          is_admin: sanitizedData.isAdmin
-        });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
       }
 
-      return authData;
+      const response = await fetch('/functions/v1/admin-user-operations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'create_user',
+          email: sanitizedData.email,
+          password: sanitizedData.password,
+          fullName: sanitizedData.fullName,
+          isAdmin: sanitizedData.isAdmin
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create user');
+      }
+
+      return await response.json();
     },
     onSuccess: () => {
       toast.success('Usuário criado com sucesso! Conta pendente de aprovação.');
@@ -280,6 +265,43 @@ export const useSecureUserOperations = () => {
     }
   });
 
+  // Admin password reset mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
+      }
+
+      const response = await fetch('/functions/v1/admin-user-operations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'reset_password',
+          userId,
+          email
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reset password');
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast.success('Email de recuperação enviado com sucesso!');
+    },
+    onError: (error: any) => {
+      console.error('Error resetting password:', error);
+      toast.error(`Erro ao enviar email de recuperação: ${error.message}`);
+    }
+  });
+
   return {
     users,
     isLoading,
@@ -289,6 +311,7 @@ export const useSecureUserOperations = () => {
     approveUserMutation,
     freezeUserMutation,
     unfreezeUserMutation,
-    deleteUserMutation
+    deleteUserMutation,
+    resetPasswordMutation
   };
 };

@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { UserPlus } from 'lucide-react';
-import { useUserOperations } from './user-management/useUserOperations';
+import { useSecureUserOperations } from './user-management/SecureUserOperations';
 import { UserProfile } from './user-management/types';
 import UserForm from './user-management/UserForm';
 import UserList from './user-management/UserList';
@@ -21,8 +20,9 @@ const UserManagement = () => {
     approveUserMutation,
     freezeUserMutation,
     unfreezeUserMutation,
-    deleteUserMutation
-  } = useUserOperations();
+    deleteUserMutation,
+    resetPasswordMutation
+  } = useSecureUserOperations();
 
   const handleCreateUser = async (formData: any) => {
     await createUserMutation.mutateAsync({
@@ -67,6 +67,12 @@ const UserManagement = () => {
 
   const handleDeleteUser = (userId: string) => {
     deleteUserMutation.mutate(userId);
+  };
+
+  const handleResetPassword = (userId: string, email: string) => {
+    if (window.confirm(`Tem certeza que deseja enviar um email de recuperação de senha para ${email}?`)) {
+      resetPasswordMutation.mutate({ userId, email });
+    }
   };
 
   if (isLoading) {
@@ -148,8 +154,10 @@ const UserManagement = () => {
         onApprove={handleApproveUser}
         onFreeze={handleFreezeUser}
         onUnfreeze={handleUnfreezeUser}
+        onResetPassword={handleResetPassword}
         deleteLoading={deleteUserMutation.isPending}
         statusLoading={approveUserMutation.isPending || freezeUserMutation.isPending || unfreezeUserMutation.isPending}
+        resetPasswordLoading={resetPasswordMutation.isPending}
       />
     </div>
   );
