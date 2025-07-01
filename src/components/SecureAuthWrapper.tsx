@@ -25,10 +25,11 @@ const SecureAuthWrapper = () => {
     }
   }, [loading]);
 
-  // Simplified security check - only check if really necessary
+  // Minimal security check only when absolutely necessary
   useEffect(() => {
     if (user && !loading && !isAdmin) {
-      const checkAccountStatus = async () => {
+      // Only check if user might have access violations, don't block UI
+      setTimeout(async () => {
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -36,25 +37,16 @@ const SecureAuthWrapper = () => {
             .eq('id', user.id)
             .maybeSingle();
 
-          // Only block if account is explicitly frozen
           if (profile?.account_status === 'frozen') {
             setHasAccessViolation(true);
             await supabase.auth.signOut();
-            return;
           }
-
-          setHasAccessViolation(false);
         } catch (error) {
-          console.error('Security check error:', error);
-          // Don't block on errors - let user proceed
-          setHasAccessViolation(false);
+          // Ignore errors - don't block user
         }
-      };
-
-      // Run check in background without blocking UI
-      setTimeout(checkAccountStatus, 100);
+      }, 500); // Delay to not block initial render
     }
-  }, [user, loading, isAdmin]);
+  }, [user?.id, isAdmin]); // Only depend on user ID and admin status
 
   if (loading) {
     return (
