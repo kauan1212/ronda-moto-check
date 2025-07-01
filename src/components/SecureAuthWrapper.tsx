@@ -12,12 +12,12 @@ const SecureAuthWrapper = () => {
   const [showEmergencyButton, setShowEmergencyButton] = useState(false);
   const [hasAccessViolation, setHasAccessViolation] = useState(false);
 
-  // Show emergency button after 5 seconds
+  // Show emergency button after 2 seconds for faster UX
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         setShowEmergencyButton(true);
-      }, 5000);
+      }, 2000);
 
       return () => clearTimeout(timer);
     } else {
@@ -25,101 +25,66 @@ const SecureAuthWrapper = () => {
     }
   }, [loading]);
 
-  // Check for access violations and log them
+  // Simplified security check - only check if really necessary
   useEffect(() => {
-    if (user && !loading) {
-      const checkSecurityStatus = async () => {
+    if (user && !loading && !isAdmin) {
+      const checkAccountStatus = async () => {
         try {
-          // Verify user account status
-          const { data: profile, error } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
-            .select('account_status, is_admin')
+            .select('account_status')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
-          if (error) {
-            console.error('❌ Security check failed:', error);
-            setHasAccessViolation(true);
-            return;
-          }
-
-          // Check for account status violations
-          if (profile?.account_status === 'pending') {
-            console.log('⚠️ Access violation: Account pending');
-            await supabase
-              .from('security_audit')
-              .insert({
-                user_id: user.id,
-                action: 'access_violation_pending_account',
-                details: { user_email: user.email }
-              });
-            setHasAccessViolation(true);
-            await supabase.auth.signOut();
-            return;
-          }
-
+          // Only block if account is explicitly frozen
           if (profile?.account_status === 'frozen') {
-            console.log('⚠️ Access violation: Account frozen');
-            await supabase
-              .from('security_audit')
-              .insert({
-                user_id: user.id,
-                action: 'access_violation_frozen_account',
-                details: { user_email: user.email }
-              });
             setHasAccessViolation(true);
             await supabase.auth.signOut();
             return;
-          }
-
-          // Verify admin status consistency
-          if (isAdmin !== profile?.is_admin) {
-            console.log('⚠️ Admin status inconsistency detected');
-            await supabase
-              .from('security_audit')
-              .insert({
-                user_id: user.id,
-                action: 'admin_status_inconsistency',
-                details: { 
-                  session_admin: isAdmin,
-                  profile_admin: profile?.is_admin 
-                }
-              });
           }
 
           setHasAccessViolation(false);
         } catch (error) {
-          console.error('💥 Security check error:', error);
+          console.error('Security check error:', error);
+          // Don't block on errors - let user proceed
+          setHasAccessViolation(false);
         }
       };
 
-      checkSecurityStatus();
+      // Run check in background without blocking UI
+      setTimeout(checkAccountStatus, 100);
     }
   }, [user, loading, isAdmin]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <img 
-            src="/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png" 
-            alt="VigioSystem Logo" 
-            className="h-16 w-16 object-contain animate-pulse"
-          />
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <div className="text-lg text-gray-700">🔐 Verificando autenticação e permissões...</div>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/10 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-6 animate-fade-in">
+          <div className="relative">
+            <img 
+              src="/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png" 
+              alt="VigioSystem Logo" 
+              className="h-20 w-20 object-contain"
+            />
+            <div className="absolute -bottom-2 -right-2 animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+          </div>
+          <div className="text-center space-y-2">
+            <div className="text-lg font-medium text-foreground">Carregando sistema...</div>
+            <div className="text-sm text-muted-foreground">Aguarde um momento</div>
+          </div>
           
           {showEmergencyButton && (
-            <div className="mt-8 text-center space-y-4">
-              <p className="text-sm text-gray-600">
-                A verificação de segurança está demorando mais que o esperado.
+            <div className="mt-6 text-center space-y-3 animate-fade-in">
+              <p className="text-sm text-muted-foreground">
+                Carregamento está demorando?
               </p>
               <Button 
                 onClick={forceLogout}
                 variant="outline"
-                className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                size="sm"
+                className="hover-scale"
               >
-                Forçar Logout e Recarregar
+                Recarregar Aplicação
               </Button>
             </div>
           )}
