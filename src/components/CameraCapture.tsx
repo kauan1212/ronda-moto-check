@@ -35,8 +35,8 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const capabilities = videoTrack.getCapabilities();
-        const hasFlash = 'torch' in capabilities && capabilities.torch;
-        setIsFlashSupported(hasFlash);
+        const hasFlash = 'torch' in capabilities && (capabilities as any).torch;
+        setIsFlashSupported(Boolean(hasFlash));
         console.log('Flash support:', hasFlash);
       }
     } catch (error) {
@@ -53,7 +53,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       if (videoTrack) {
         const newFlashState = !flashEnabled;
         await videoTrack.applyConstraints({
-          advanced: [{ torch: newFlashState }]
+          advanced: [{ torch: newFlashState } as any]
         });
         setFlashEnabled(newFlashState);
         console.log('Flash toggled:', newFlashState);
