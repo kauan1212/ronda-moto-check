@@ -86,10 +86,13 @@ export const useCondominiumOperations = () => {
         }
         
         // Log the security event
-        await supabase.rpc('log_security_event', {
-          p_action: 'condominium_updated',
-          p_details: { condominium_id: editingCondominium.id }
-        });
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: user.id,
+            action: 'condominium_updated',
+            details: { condominium_id: editingCondominium.id }
+          });
         
         toast.success('Condomínio atualizado com sucesso!');
       } else {
@@ -106,10 +109,13 @@ export const useCondominiumOperations = () => {
         }
         
         // Log the security event
-        await supabase.rpc('log_security_event', {
-          p_action: 'condominium_created',
-          p_details: { condominium_name: condominiumData.name }
-        });
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: user.id,
+            action: 'condominium_created',
+            details: { condominium_name: condominiumData.name }
+          });
         
         toast.success('Condomínio criado com sucesso!');
       }
@@ -154,13 +160,18 @@ export const useCondominiumOperations = () => {
       }
       
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'condominium_deleted',
-        p_details: { 
-          condominium_id: condominium.id,
-          condominium_name: condominium.name 
-        }
-      });
+      if (user) {
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: user.id,
+            action: 'condominium_deleted',
+            details: { 
+              condominium_id: condominium.id,
+              condominium_name: condominium.name 
+            }
+          });
+      }
       
       toast.success('Condomínio excluído com sucesso!');
       return true;

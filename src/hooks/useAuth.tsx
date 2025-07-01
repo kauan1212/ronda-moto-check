@@ -28,12 +28,15 @@ export const useAuth = () => {
         if (session?.user) {
           console.log('🔐 Checking user admin status for:', session.user.email);
           
-          // Use the new secure admin function from database
-          const { data: isAdminResult, error: adminError } = await supabase
-            .rpc('is_user_admin_secure');
+          // Check admin status from profiles table directly
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
 
-          if (adminError) {
-            console.error('❌ Admin check error:', adminError);
+          if (profileError) {
+            console.error('❌ Profile check error:', profileError);
             // Fallback to email check for backwards compatibility
             const isAdmin = session.user.email === 'kauankg@hotmail.com';
             
@@ -48,7 +51,7 @@ export const useAuth = () => {
             return;
           }
 
-          const isAdmin = Boolean(isAdminResult);
+          const isAdmin = Boolean(profile?.is_admin);
           console.log('✅ Admin status determined:', isAdmin);
 
           if (mounted) {
@@ -63,19 +66,19 @@ export const useAuth = () => {
           // Check account status for non-admin users
           if (!isAdmin) {
             try {
-              const { data: profile } = await supabase
+              const { data: profileStatus } = await supabase
                 .from('profiles')
                 .select('account_status')
                 .eq('id', session.user.id)
                 .single();
 
-              if (profile?.account_status === 'pending') {
+              if (profileStatus?.account_status === 'pending') {
                 console.log('⏳ Account pending approval');
                 await supabase.auth.signOut();
                 return;
               }
 
-              if (profile?.account_status === 'frozen') {
+              if (profileStatus?.account_status === 'frozen') {
                 console.log('🧊 Account frozen');
                 await supabase.auth.signOut();
                 return;
@@ -128,22 +131,27 @@ export const useAuth = () => {
         // Log security events
         if (event === 'SIGNED_IN' && session?.user) {
           try {
-            await supabase.rpc('log_security_event', {
-              p_action: 'user_login',
-              p_details: { 
-                login_method: 'password',
-                user_agent: navigator.userAgent 
-              }
-            });
+            await supabase
+              .from('security_audit')
+              .insert({
+                user_id: session.user.id,
+                action: 'user_login',
+                details: { 
+                  login_method: 'password',
+                  user_agent: navigator.userAgent 
+                }
+              });
           } catch (error) {
             console.error('Failed to log login event:', error);
           }
         } else if (event === 'SIGNED_OUT') {
           try {
-            await supabase.rpc('log_security_event', {
-              p_action: 'user_logout',
-              p_details: { user_agent: navigator.userAgent }
-            });
+            await supabase
+              .from('security_audit')
+              .insert({
+                action: 'user_logout',
+                details: { user_agent: navigator.userAgent }
+              });
           } catch (error) {
             console.error('Failed to log logout event:', error);
           }

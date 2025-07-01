@@ -65,13 +65,16 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_created',
-        p_details: { 
-          target_email: sanitizedData.email,
-          is_admin: sanitizedData.isAdmin 
-        }
-      });
+      await supabase
+        .from('security_audit')
+        .insert({
+          user_id: session.user.id,
+          action: 'user_created',
+          details: { 
+            target_email: sanitizedData.email,
+            is_admin: sanitizedData.isAdmin 
+          }
+        });
 
       return response.data;
     },
@@ -118,14 +121,17 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_updated',
-        p_target_user_id: userData.userId,
-        p_details: { 
-          is_admin: userData.isAdmin,
-          password_changed: !!userData.newPassword
-        }
-      });
+      await supabase
+        .from('security_audit')
+        .insert({
+          user_id: session.user.id,
+          target_user_id: userData.userId,
+          action: 'user_updated',
+          details: { 
+            is_admin: userData.isAdmin,
+            password_changed: !!userData.newPassword
+          }
+        });
 
       return response.data;
     },
@@ -170,11 +176,14 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'password_reset_admin',
-        p_target_user_id: userId,
-        p_details: { target_email: email }
-      });
+      await supabase
+        .from('security_audit')
+        .insert({
+          user_id: session.user.id,
+          target_user_id: userId,
+          action: 'password_reset_admin',
+          details: { target_email: email }
+        });
 
       return response.data;
     },
@@ -208,10 +217,15 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_approved',
-        p_target_user_id: userId
-      });
+      if (currentUser) {
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: currentUser.id,
+            target_user_id: userId,
+            action: 'user_approved'
+          });
+      }
 
       return userId;
     },
@@ -251,10 +265,15 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_frozen',
-        p_target_user_id: userId
-      });
+      if (currentUser) {
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: currentUser.id,
+            target_user_id: userId,
+            action: 'user_frozen'
+          });
+      }
 
       return userId;
     },
@@ -278,6 +297,8 @@ export const useSecureUserOperations = () => {
     mutationFn: async (userId: string) => {
       console.log('🔓 Unfreezing user:', userId);
       
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
       // RLS policies will automatically verify admin access
       const { error } = await supabase
         .from('profiles')
@@ -294,10 +315,15 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_unfrozen',
-        p_target_user_id: userId
-      });
+      if (currentUser) {
+        await supabase
+          .from('security_audit')
+          .insert({
+            user_id: currentUser.id,
+            target_user_id: userId,
+            action: 'user_unfrozen'
+          });
+      }
 
       return userId;
     },
@@ -345,10 +371,13 @@ export const useSecureUserOperations = () => {
       }
 
       // Log the security event
-      await supabase.rpc('log_security_event', {
-        p_action: 'user_deleted',
-        p_target_user_id: userId
-      });
+      await supabase
+        .from('security_audit')
+        .insert({
+          user_id: session.user.id,
+          target_user_id: userId,
+          action: 'user_deleted'
+        });
 
       return response.data;
     },

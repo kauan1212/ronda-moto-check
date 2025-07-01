@@ -46,10 +46,13 @@ const SecureAuthWrapper = () => {
           // Check for account status violations
           if (profile?.account_status === 'pending') {
             console.log('⚠️ Access violation: Account pending');
-            await supabase.rpc('log_security_event', {
-              p_action: 'access_violation_pending_account',
-              p_details: { user_email: user.email }
-            });
+            await supabase
+              .from('security_audit')
+              .insert({
+                user_id: user.id,
+                action: 'access_violation_pending_account',
+                details: { user_email: user.email }
+              });
             setHasAccessViolation(true);
             await supabase.auth.signOut();
             return;
@@ -57,10 +60,13 @@ const SecureAuthWrapper = () => {
 
           if (profile?.account_status === 'frozen') {
             console.log('⚠️ Access violation: Account frozen');
-            await supabase.rpc('log_security_event', {
-              p_action: 'access_violation_frozen_account',
-              p_details: { user_email: user.email }
-            });
+            await supabase
+              .from('security_audit')
+              .insert({
+                user_id: user.id,
+                action: 'access_violation_frozen_account',
+                details: { user_email: user.email }
+              });
             setHasAccessViolation(true);
             await supabase.auth.signOut();
             return;
@@ -69,13 +75,16 @@ const SecureAuthWrapper = () => {
           // Verify admin status consistency
           if (isAdmin !== profile?.is_admin) {
             console.log('⚠️ Admin status inconsistency detected');
-            await supabase.rpc('log_security_event', {
-              p_action: 'admin_status_inconsistency',
-              p_details: { 
-                session_admin: isAdmin,
-                profile_admin: profile?.is_admin 
-              }
-            });
+            await supabase
+              .from('security_audit')
+              .insert({
+                user_id: user.id,
+                action: 'admin_status_inconsistency',
+                details: { 
+                  session_admin: isAdmin,
+                  profile_admin: profile?.is_admin 
+                }
+              });
           }
 
           setHasAccessViolation(false);
