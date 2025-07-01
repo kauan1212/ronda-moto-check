@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import AuthWrapper from "./components/AuthWrapper";
+import SecureAuthWrapper from "./components/SecureAuthWrapper";
 import VigilanteChecklistPage from "./pages/VigilanteChecklistPage";
 import NotFound from "./pages/NotFound";
 
@@ -19,8 +19,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AuthWrapper />} />
-            <Route path="/admin" element={<AuthWrapper />} />
+            <Route path="/" element={<SecureAuthWrapper />} />
+            <Route path="/admin" element={<SecureAuthWrapper />} />
             <Route path="/vigilante-checklist" element={<VigilanteChecklistPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

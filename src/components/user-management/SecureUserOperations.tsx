@@ -4,28 +4,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile, CreateUserData, UpdateUserData } from './types';
 import { sanitizeFormData } from '@/utils/inputSanitizer';
-import { useAuditLog } from '@/hooks/useAuditLog';
 
 export const useSecureUserOperations = () => {
   const queryClient = useQueryClient();
-  const { logSecurityEvent } = useAuditLog();
 
-  // Buscar todos os usuários
+  // Buscar todos os usuários (RLS will filter based on user permissions)
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      console.log('Fetching all users...');
+      console.log('👥 Fetching users with RLS security...');
+      
+      // This query will now be filtered by RLS policies
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching users:', error);
+        console.error('❌ Error fetching users:', error);
         throw error;
       }
       
-      console.log('Fetched users:', data?.length);
+      console.log('✅ Fetched users (RLS filtered):', data?.length);
       return data as UserProfile[];
     }
   });
@@ -35,7 +35,7 @@ export const useSecureUserOperations = () => {
     mutationFn: async (userData: CreateUserData) => {
       const sanitizedData = sanitizeFormData(userData);
       
-      console.log('Creating user via Edge Function');
+      console.log('👤 Creating user via Edge Function');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -52,17 +52,26 @@ export const useSecureUserOperations = () => {
         }
       });
 
-      console.log('Edge function response:', response);
+      console.log('📤 Edge function response:', response);
 
       if (response.error) {
-        console.error('Edge function error:', response.error);
+        console.error('❌ Edge function error:', response.error);
         throw new Error(response.error.message || 'Failed to create user');
       }
 
       if (!response.data?.success) {
-        console.error('Edge function returned failure:', response.data);
+        console.error('❌ Edge function returned failure:', response.data);
         throw new Error(response.data?.error || 'Failed to create user');
       }
+
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_created',
+        p_details: { 
+          target_email: sanitizedData.email,
+          is_admin: sanitizedData.isAdmin 
+        }
+      });
 
       return response.data;
     },
@@ -71,7 +80,7 @@ export const useSecureUserOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error creating user:', error);
+      console.error('💥 Error creating user:', error);
       toast.error(`Erro ao criar usuário: ${error.message}`);
     }
   });
@@ -79,7 +88,7 @@ export const useSecureUserOperations = () => {
   // Enhanced update user with password support
   const updateUserMutation = useMutation({
     mutationFn: async (userData: UpdateUserData & { newPassword?: string }) => {
-      console.log('Updating user via Edge Function');
+      console.log('📝 Updating user via Edge Function');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -96,17 +105,27 @@ export const useSecureUserOperations = () => {
         }
       });
 
-      console.log('Update user response:', response);
+      console.log('📤 Update user response:', response);
 
       if (response.error) {
-        console.error('Edge function error:', response.error);
+        console.error('❌ Edge function error:', response.error);
         throw new Error(response.error.message || 'Failed to update user');
       }
 
       if (!response.data?.success) {
-        console.error('Edge function returned failure:', response.data);
+        console.error('❌ Edge function returned failure:', response.data);
         throw new Error(response.data?.error || 'Failed to update user');
       }
+
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_updated',
+        p_target_user_id: userData.userId,
+        p_details: { 
+          is_admin: userData.isAdmin,
+          password_changed: !!userData.newPassword
+        }
+      });
 
       return response.data;
     },
@@ -115,7 +134,7 @@ export const useSecureUserOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error updating user:', error);
+      console.error('💥 Error updating user:', error);
       toast.error(`Erro ao atualizar usuário: ${error.message}`);
     }
   });
@@ -123,7 +142,7 @@ export const useSecureUserOperations = () => {
   // Admin password reset mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      console.log('Resetting password via Edge Function');
+      console.log('🔑 Resetting password via Edge Function');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -138,17 +157,24 @@ export const useSecureUserOperations = () => {
         }
       });
 
-      console.log('Reset password response:', response);
+      console.log('📤 Reset password response:', response);
 
       if (response.error) {
-        console.error('Reset password error:', response.error);
+        console.error('❌ Reset password error:', response.error);
         throw new Error(response.error.message || 'Failed to reset password');
       }
 
       if (!response.data?.success) {
-        console.error('Edge function returned failure:', response.data);
+        console.error('❌ Edge function returned failure:', response.data);
         throw new Error(response.data?.error || 'Failed to reset password');
       }
+
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'password_reset_admin',
+        p_target_user_id: userId,
+        p_details: { target_email: email }
+      });
 
       return response.data;
     },
@@ -156,7 +182,7 @@ export const useSecureUserOperations = () => {
       toast.success('Email de recuperação enviado com sucesso!');
     },
     onError: (error: any) => {
-      console.error('Error resetting password:', error);
+      console.error('💥 Error resetting password:', error);
       toast.error(`Erro ao enviar email de recuperação: ${error.message}`);
     }
   });
@@ -166,6 +192,7 @@ export const useSecureUserOperations = () => {
     mutationFn: async (userId: string) => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
+      // RLS policies will automatically verify admin access
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -175,9 +202,17 @@ export const useSecureUserOperations = () => {
         })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error approving user:', error);
+        throw error;
+      }
 
-      await logSecurityEvent('user_approved', userId);
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_approved',
+        p_target_user_id: userId
+      });
+
       return userId;
     },
     onSuccess: () => {
@@ -185,8 +220,13 @@ export const useSecureUserOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error approving user:', error);
-      toast.error(`Erro ao aprovar usuário: ${error.message}`);
+      console.error('💥 Error approving user:', error);
+      
+      if (error.message?.includes('row-level security')) {
+        toast.error('Você não tem permissão para aprovar usuários');
+      } else {
+        toast.error(`Erro ao aprovar usuário: ${error.message}`);
+      }
     }
   });
 
@@ -195,6 +235,7 @@ export const useSecureUserOperations = () => {
     mutationFn: async (userId: string) => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       
+      // RLS policies will automatically verify admin access
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -204,9 +245,17 @@ export const useSecureUserOperations = () => {
         })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error freezing user:', error);
+        throw error;
+      }
 
-      await logSecurityEvent('user_frozen', userId);
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_frozen',
+        p_target_user_id: userId
+      });
+
       return userId;
     },
     onSuccess: () => {
@@ -214,16 +263,22 @@ export const useSecureUserOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error freezing user:', error);
-      toast.error(`Erro ao congelar usuário: ${error.message}`);
+      console.error('💥 Error freezing user:', error);
+      
+      if (error.message?.includes('row-level security')) {
+        toast.error('Você não tem permissão para congelar usuários');
+      } else {
+        toast.error(`Erro ao congelar usuário: ${error.message}`);
+      }
     }
   });
 
-  // Descongelar usuário
+  // Unfreeze user
   const unfreezeUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      console.log('Unfreezing user:', userId);
+      console.log('🔓 Unfreezing user:', userId);
       
+      // RLS policies will automatically verify admin access
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -234,9 +289,15 @@ export const useSecureUserOperations = () => {
         .eq('id', userId);
 
       if (error) {
-        console.error('Unfreeze error:', error);
+        console.error('❌ Unfreeze error:', error);
         throw error;
       }
+
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_unfrozen',
+        p_target_user_id: userId
+      });
 
       return userId;
     },
@@ -245,51 +306,58 @@ export const useSecureUserOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error unfreezing user:', error);
-      toast.error(`Erro ao descongelar usuário: ${error.message}`);
+      console.error('💥 Error unfreezing user:', error);
+      
+      if (error.message?.includes('row-level security')) {
+        toast.error('Você não tem permissão para descongelar usuários');
+      } else {
+        toast.error(`Erro ao descongelar usuário: ${error.message}`);
+      }
     }
   });
 
-  // Deletar usuário
+  // Delete user with enhanced security
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      console.log('Deleting user:', userId);
+      console.log('🗑️ Deleting user:', userId);
       
-      // Deletar roles primeiro
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId);
-
-      if (roleError) {
-        console.error('Role deletion error:', roleError);
-        throw roleError;
+      // Use Edge Function for secure user deletion
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authentication session');
       }
 
-      // Deletar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
+      const response = await supabase.functions.invoke('admin-user-operations', {
+        body: {
+          action: 'delete_user',
+          userId
+        }
+      });
 
-      if (profileError) {
-        console.error('Profile deletion error:', profileError);
-        throw profileError;
+      if (response.error) {
+        console.error('❌ Edge function error:', response.error);
+        throw new Error(response.error.message || 'Failed to delete user');
       }
 
-      // Deletar usuário do auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) {
-        console.error('Auth deletion error:', authError);
-        throw authError;
+      if (!response.data?.success) {
+        console.error('❌ Edge function returned failure:', response.data);
+        throw new Error(response.data?.error || 'Failed to delete user');
       }
+
+      // Log the security event
+      await supabase.rpc('log_security_event', {
+        p_action: 'user_deleted',
+        p_target_user_id: userId
+      });
+
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Usuário deletado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error: any) => {
-      console.error('Error deleting user:', error);
+      console.error('💥 Error deleting user:', error);
       toast.error(`Erro ao deletar usuário: ${error.message}`);
     }
   });

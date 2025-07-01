@@ -20,21 +20,37 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
-    let profileTimeout: NodeJS.Timeout;
 
     const updateAuthState = async (session: Session | null) => {
       if (!mounted) return;
-      
-      if (profileTimeout) {
-        clearTimeout(profileTimeout);
-      }
 
       try {
         if (session?.user) {
-          // Always check email first for admin status
-          const isAdmin = session.user.email === 'kauankg@hotmail.com';
+          console.log('🔐 Checking user admin status for:', session.user.email);
           
-          // Set immediate state with email-based admin check
+          // Use the new secure admin function from database
+          const { data: isAdminResult, error: adminError } = await supabase
+            .rpc('is_user_admin_secure');
+
+          if (adminError) {
+            console.error('❌ Admin check error:', adminError);
+            // Fallback to email check for backwards compatibility
+            const isAdmin = session.user.email === 'kauankg@hotmail.com';
+            
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                session,
+                loading: false,
+                isAdmin,
+              });
+            }
+            return;
+          }
+
+          const isAdmin = Boolean(isAdminResult);
+          console.log('✅ Admin status determined:', isAdmin);
+
           if (mounted) {
             setAuthState({
               user: session.user,
@@ -44,36 +60,30 @@ export const useAuth = () => {
             });
           }
 
-          // Optionally fetch profile data in background for additional info
+          // Check account status for non-admin users
           if (!isAdmin) {
-            profileTimeout = setTimeout(async () => {
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('account_status, is_admin')
-                  .eq('id', session.user.id)
-                  .single();
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('account_status')
+                .eq('id', session.user.id)
+                .single();
 
-                if (mounted && profile) {
-                  // Check account status
-                  if (profile.account_status !== 'active') {
-                    await supabase.auth.signOut();
-                    return;
-                  }
-
-                  // Update admin status if profile indicates admin
-                  const finalIsAdmin = session.user.email === 'kauankg@hotmail.com' || profile.is_admin;
-                  
-                  setAuthState(prev => ({
-                    ...prev,
-                    isAdmin: finalIsAdmin,
-                  }));
-                }
-              } catch (error) {
-                // Silently fail - we already have basic auth working
-                console.log('Profile fetch failed, continuing with email-based auth');
+              if (profile?.account_status === 'pending') {
+                console.log('⏳ Account pending approval');
+                await supabase.auth.signOut();
+                return;
               }
-            }, 100); // Very short delay for profile check
+
+              if (profile?.account_status === 'frozen') {
+                console.log('🧊 Account frozen');
+                await supabase.auth.signOut();
+                return;
+              }
+            } catch (error) {
+              console.error('⚠️ Error checking account status:', error);
+              // Continue with login - profile check is not critical
+            }
           }
         } else {
           if (mounted) {
@@ -86,7 +96,7 @@ export const useAuth = () => {
           }
         }
       } catch (error) {
-        console.error('Auth state update error:', error);
+        console.error('💥 Auth state update error:', error);
         if (mounted) {
           setAuthState(prev => ({
             ...prev,
@@ -99,10 +109,11 @@ export const useAuth = () => {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('🔐 Getting initial session...');
         const { data: { session } } = await supabase.auth.getSession();
         await updateAuthState(session);
       } catch (error) {
-        console.error('Initial session error:', error);
+        console.error('💥 Initial session error:', error);
         if (mounted) {
           setAuthState(prev => ({ ...prev, loading: false }));
         }
@@ -112,6 +123,32 @@ export const useAuth = () => {
     // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔐 Auth state change:', event);
+        
+        // Log security events
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            await supabase.rpc('log_security_event', {
+              p_action: 'user_login',
+              p_details: { 
+                login_method: 'password',
+                user_agent: navigator.userAgent 
+              }
+            });
+          } catch (error) {
+            console.error('Failed to log login event:', error);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          try {
+            await supabase.rpc('log_security_event', {
+              p_action: 'user_logout',
+              p_details: { user_agent: navigator.userAgent }
+            });
+          } catch (error) {
+            console.error('Failed to log logout event:', error);
+          }
+        }
+
         await updateAuthState(session);
       }
     );
@@ -120,14 +157,13 @@ export const useAuth = () => {
 
     return () => {
       mounted = false;
-      if (profileTimeout) {
-        clearTimeout(profileTimeout);
-      }
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔐 Attempting sign in for:', email);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -137,6 +173,8 @@ export const useAuth = () => {
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
+    console.log('📝 Attempting sign up for:', email);
+    
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -154,12 +192,14 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
+    console.log('🔐 Signing out user');
     const { error } = await supabase.auth.signOut();
     return { error };
   };
 
   const forceLogout = async () => {
     try {
+      console.log('🔐 Force logout initiated');
       await supabase.auth.signOut();
       setAuthState({
         user: null,
@@ -170,7 +210,7 @@ export const useAuth = () => {
       localStorage.clear();
       window.location.reload();
     } catch (error) {
-      console.error('Force logout error:', error);
+      console.error('💥 Force logout error:', error);
       window.location.reload();
     }
   };
