@@ -1,7 +1,6 @@
-
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, X, RotateCcw, Check } from 'lucide-react';
+import { Camera, X, RotateCcw, Check, Flashlight, FlashlightOff } from 'lucide-react';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -19,6 +18,8 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [isFlashSupported, setIsFlashSupported] = useState(false);
 
   const cleanup = useCallback(() => {
     if (streamRef.current) {
@@ -28,6 +29,39 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       streamRef.current = null;
     }
   }, []);
+
+  const checkFlashSupport = useCallback(async (stream: MediaStream) => {
+    try {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        const capabilities = videoTrack.getCapabilities();
+        const hasFlash = 'torch' in capabilities && capabilities.torch;
+        setIsFlashSupported(hasFlash);
+        console.log('Flash support:', hasFlash);
+      }
+    } catch (error) {
+      console.log('Flash support check failed:', error);
+      setIsFlashSupported(false);
+    }
+  }, []);
+
+  const toggleFlash = useCallback(async () => {
+    if (!streamRef.current || !isFlashSupported) return;
+
+    try {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        const newFlashState = !flashEnabled;
+        await videoTrack.applyConstraints({
+          advanced: [{ torch: newFlashState }]
+        });
+        setFlashEnabled(newFlashState);
+        console.log('Flash toggled:', newFlashState);
+      }
+    } catch (error) {
+      console.error('Error toggling flash:', error);
+    }
+  }, [flashEnabled, isFlashSupported]);
 
   const startCamera = useCallback(async () => {
     setIsLoading(true);
@@ -50,6 +84,9 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       
       streamRef.current = stream;
       setHasPermission(true);
+
+      // Check flash support after getting the stream
+      await checkFlashSupport(stream);
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -90,7 +127,7 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
       setError('Não foi possível acessar a câmera. Verifique as permissões.');
       setIsLoading(false);
     }
-  }, [facingMode, cleanup]);
+  }, [facingMode, cleanup, checkFlashSupport]);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) {
@@ -136,12 +173,20 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
 
   const switchCamera = useCallback(() => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+    setFlashEnabled(false); // Reset flash when switching cameras
   }, []);
 
   useEffect(() => {
     startCamera();
     return cleanup;
   }, [startCamera, cleanup]);
+
+  // Turn off flash when switching to front camera
+  useEffect(() => {
+    if (facingMode === 'user' && flashEnabled) {
+      setFlashEnabled(false);
+    }
+  }, [facingMode, flashEnabled]);
 
   if (hasPermission === false) {
     return (
@@ -183,16 +228,33 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
           <X className="h-6 w-6" />
         </Button>
         <h2 className="text-lg font-semibold">{title}</h2>
-        {!isLoading && !error && !capturedImage && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={switchCamera}
-            className="text-white hover:bg-white/20"
-          >
-            <RotateCcw className="h-6 w-6" />
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {!isLoading && !error && !capturedImage && isFlashSupported && facingMode === 'environment' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleFlash}
+              className={`text-white hover:bg-white/20 ${flashEnabled ? 'bg-yellow-500/20' : ''}`}
+              title={flashEnabled ? 'Desligar Flash' : 'Ligar Flash'}
+            >
+              {flashEnabled ? (
+                <Flashlight className="h-6 w-6 text-yellow-400" />
+              ) : (
+                <FlashlightOff className="h-6 w-6" />
+              )}
+            </Button>
+          )}
+          {!isLoading && !error && !capturedImage && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={switchCamera}
+              className="text-white hover:bg-white/20"
+            >
+              <RotateCcw className="h-6 w-6" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 relative overflow-hidden bg-black">
@@ -257,13 +319,20 @@ const CameraCapture = ({ onCapture, onCancel, title = "Capturar Foto" }: CameraC
         ) : (
           <div className="flex justify-center items-center">
             {!isLoading && !error && (
-              <Button
-                size="lg"
-                onClick={capturePhoto}
-                className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black flex items-center justify-center"
-              >
-                <Camera className="h-8 w-8" />
-              </Button>
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={capturePhoto}
+                  className="w-16 h-16 rounded-full bg-white hover:bg-gray-200 text-black flex items-center justify-center"
+                >
+                  <Camera className="h-8 w-8" />
+                </Button>
+                {isFlashSupported && facingMode === 'environment' && (
+                  <div className="text-white text-sm text-center">
+                    Flash: {flashEnabled ? 'Ligado' : 'Desligado'}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
