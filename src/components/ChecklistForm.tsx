@@ -23,9 +23,10 @@ import { useChecklistOperations } from '@/hooks/useChecklistOperations';
 
 interface ChecklistFormProps {
   onComplete: () => void;
+  condominiumId?: string;
 }
 
-const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
+const ChecklistForm = ({ onComplete, condominiumId }: ChecklistFormProps) => {
   const [showSignature, setShowSignature] = useState(false);
   
   const { formData, updateFormData, resetForm } = useChecklistForm();
@@ -61,6 +62,7 @@ const ChecklistForm = ({ onComplete }: ChecklistFormProps) => {
         vigilanteId={formData.vigilante_id}
         motorcycleId={formData.motorcycle_id}
         type={formData.type}
+        condominiumId={condominiumId || ''}
         onVigilanteChange={(value) => updateFormData({ vigilante_id: value })}
         onMotorcycleChange={(value) => updateFormData({ motorcycle_id: value })}
         onTypeChange={(value) => updateFormData({ type: value })}

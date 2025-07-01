@@ -20,44 +20,46 @@ export const useAuth = () => {
 
   useEffect(() => {
     let mounted = true;
+    let hasInitialized = false;
 
-    const updateAuthState = async (session: Session | null) => {
+    const updateAuthState = (session: Session | null) => {
       if (!mounted) return;
 
       try {
         if (session?.user) {
-          // Simple admin check without excessive logging
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin, account_status')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          const isAdmin = profile?.is_admin || session.user.email === 'kauankg@hotmail.com';
+          const isAdmin = session.user.email === 'kauankg@hotmail.com';
           
-          // Don't block loading for non-critical account status checks
-          if (profile?.account_status === 'frozen') {
-            await supabase.auth.signOut();
-            return;
-          }
+          setAuthState({
+            user: session.user,
+            session,
+            loading: false,
+            isAdmin,
+          });
 
-          if (mounted) {
-            setAuthState({
-              user: session.user,
-              session,
-              loading: false,
-              isAdmin,
-            });
-          }
+          // Background profile check without blocking auth
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('account_status')
+                .eq('id', session.user.id)
+                .maybeSingle();
+
+              if (profile?.account_status === 'frozen' && mounted) {
+                await supabase.auth.signOut();
+              }
+            } catch (error) {
+              // Ignore profile check errors
+            }
+          }, 100);
+
         } else {
-          if (mounted) {
-            setAuthState({
-              user: null,
-              session: null,
-              loading: false,
-              isAdmin: false,
-            });
-          }
+          setAuthState({
+            user: null,
+            session: null,
+            loading: false,
+            isAdmin: false,
+          });
         }
       } catch (error) {
         console.error('Auth error:', error);
@@ -70,44 +72,28 @@ export const useAuth = () => {
       }
     };
 
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await updateAuthState(session);
-      } catch (error) {
-        console.error('Initial session error:', error);
-        if (mounted) {
-          setAuthState(prev => ({ ...prev, loading: false }));
-        }
-      }
-    };
-
-    // Set up auth listener
+    // Set up auth listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // Simple security logging without blocking
-        if (event === 'SIGNED_IN' && session?.user) {
-          setTimeout(async () => {
-            try {
-              await supabase
-                .from('security_audit')
-                .insert({
-                  user_id: session.user.id,
-                  action: 'user_login',
-                  details: { login_method: 'password' }
-                });
-            } catch (error) {
-              // Ignore audit errors
-            }
-          }, 100);
-        }
-
-        await updateAuthState(session);
+      (event, session) => {
+        console.log('Auth event:', event);
+        updateAuthState(session);
       }
     );
 
-    getInitialSession();
+    // Get initial session only once
+    if (!hasInitialized) {
+      hasInitialized = true;
+      supabase.auth.getSession()
+        .then(({ data: { session } }) => {
+          updateAuthState(session);
+        })
+        .catch((error) => {
+          console.error('Initial session error:', error);
+          if (mounted) {
+            setAuthState(prev => ({ ...prev, loading: false }));
+          }
+        });
+    }
 
     return () => {
       mounted = false;

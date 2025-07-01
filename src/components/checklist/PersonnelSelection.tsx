@@ -12,6 +12,7 @@ interface PersonnelSelectionProps {
   vigilanteId: string;
   motorcycleId: string;
   type: 'start' | 'end';
+  condominiumId: string;
   onVigilanteChange: (value: string) => void;
   onMotorcycleChange: (value: string) => void;
   onTypeChange: (value: 'start' | 'end') => void;
@@ -23,10 +24,14 @@ const PersonnelSelection = ({
   vigilanteId,
   motorcycleId,
   type,
+  condominiumId,
   onVigilanteChange,
   onMotorcycleChange,
   onTypeChange
 }: PersonnelSelectionProps) => {
+  // Filter vigilantes and motorcycles by condominium
+  const filteredVigilantes = vigilantes.filter(v => v.condominium_id === condominiumId);
+  const filteredMotorcycles = motorcycles.filter(m => m.condominium_id === condominiumId);
   return (
     <Card>
       <CardHeader>
@@ -44,7 +49,7 @@ const PersonnelSelection = ({
                 <SelectValue placeholder="Selecione o vigilante" />
               </SelectTrigger>
               <SelectContent>
-                {vigilantes.map((vigilante) => (
+                {filteredVigilantes.map((vigilante) => (
                   <SelectItem key={vigilante.id} value={vigilante.id}>
                     {vigilante.name} - {vigilante.registration}
                   </SelectItem>
@@ -60,7 +65,7 @@ const PersonnelSelection = ({
                 <SelectValue placeholder="Selecione a motocicleta" />
               </SelectTrigger>
               <SelectContent>
-                {motorcycles.map((motorcycle) => (
+                {filteredMotorcycles.map((motorcycle) => (
                   <SelectItem key={motorcycle.id} value={motorcycle.id}>
                     {motorcycle.plate} - {motorcycle.brand} {motorcycle.model}
                   </SelectItem>
