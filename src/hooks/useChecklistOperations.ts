@@ -112,7 +112,8 @@ export const useChecklistOperations = () => {
     formData: ChecklistFormData,
     vigilantes: Vigilante[],
     motorcycles: Motorcycle[],
-    userId?: string // Adicionar parâmetro userId
+    userId?: string, // Adicionar parâmetro userId
+    checklistCreatedAt?: string // Adicionar parâmetro para data de criação real
   ) => {
     const selectedVigilante = vigilantes.find(v => v.id === formData.vigilante_id);
     const selectedMotorcycle = motorcycles.find(m => m.id === formData.motorcycle_id);
@@ -125,13 +126,16 @@ export const useChecklistOperations = () => {
     // Convert vehicle_photos to motorcycle_photos format for PDF generation
     const vehiclePhotoUrls = formData.vehicle_photos.map(photo => photo.url);
 
+    // Usar a data de criação fornecida ou a atual como fallback
+    const creationDate = checklistCreatedAt || new Date().toISOString();
+
     generatePDF({
       ...formData,
       vigilante_name: selectedVigilante.name,
       motorcycle_plate: selectedMotorcycle.plate,
       id: '',
-      created_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      created_at: creationDate,
+      completed_at: creationDate,
       status: 'completed',
       condominium_id: selectedVigilante.condominium_id || selectedMotorcycle.condominium_id || '',
       motorcycle_photos: vehiclePhotoUrls,

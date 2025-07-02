@@ -49,11 +49,20 @@ const loadImageAsBase64 = async (url: string): Promise<string> => {
           return;
         }
 
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // Aumentar a resolução para melhor qualidade
+        const scale = 2;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        
+        // Configurar contexto para melhor qualidade
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.scale(scale, scale);
+        
         ctx.drawImage(img, 0, 0);
         
-        const base64 = canvas.toDataURL('image/jpeg', 0.9);
+        // Aumentar qualidade JPEG para 100%
+        const base64 = canvas.toDataURL('image/jpeg', 1.0);
         resolve(base64);
       } catch (error) {
         console.error('Erro ao converter imagem:', error);
@@ -134,12 +143,12 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
   pdf.text('RELATÓRIO DE VISTORIA DE VEÍCULO', margin + 35, yPos + 8);
   yPos += 25;
 
-  // Date and time
+  // Date and time - usar a data de criação do checklist
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'normal');
-  const currentDate = new Date();
-  const dateStr = currentDate.toLocaleDateString('pt-BR');
-  const timeStr = currentDate.toLocaleTimeString('pt-BR');
+  const checklistDate = new Date(checklistData.created_at);
+  const dateStr = checklistDate.toLocaleDateString('pt-BR');
+  const timeStr = checklistDate.toLocaleTimeString('pt-BR');
   pdf.text(`Data: ${dateStr} | Horário: ${timeStr}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 20;
 
@@ -241,8 +250,8 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
     pdf.text(`Fotos do Veículo (${vehiclePhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 80;
-    const photoHeight = 60;
+    const photoWidth = 120; // Aumentado de 80 para 120
+    const photoHeight = 90; // Aumentado de 60 para 90
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
@@ -289,8 +298,8 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
     pdf.text(`Fotos do Combustível (${fuelPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 70;
-    const photoHeight = 50;
+    const photoWidth = 100; // Aumentado de 70 para 100
+    const photoHeight = 75; // Aumentado de 50 para 75
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
@@ -328,8 +337,8 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
     pdf.text(`Fotos do Odômetro (${kmPhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 70;
-    const photoHeight = 50;
+    const photoWidth = 100; // Aumentado de 70 para 100
+    const photoHeight = 75; // Aumentado de 50 para 75
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
 
@@ -366,8 +375,8 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
     pdf.text('Foto Facial:', margin, yPos);
     yPos += 10;
 
-    await addImageToPDF(pdf, checklistData.face_photo, margin, yPos, 70, 55);
-    yPos += 60;
+    await addImageToPDF(pdf, checklistData.face_photo, margin, yPos, 100, 80); // Aumentado de 70x55 para 100x80
+    yPos += 85;
   }
 
   // Observations
@@ -420,9 +429,9 @@ export const generatePDF = async (checklistData: Checklist, userId?: string) => 
     pdf.text('ASSINATURA', margin, yPos);
     yPos += 10;
 
-    await addImageToPDF(pdf, checklistData.signature, margin, yPos, 80, 40);
+    await addImageToPDF(pdf, checklistData.signature, margin, yPos, 120, 60); // Aumentado de 80x40 para 120x60
     
-    yPos += 45;
+    yPos += 65;
     pdf.setFontSize(10);
     pdf.text(`Vigilante: ${checklistData.vigilante_name}`, margin, yPos);
     pdf.text(`Data: ${dateStr} às ${timeStr}`, margin, yPos + 6);
