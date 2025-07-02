@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -141,7 +140,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
   if (loading) {
     return (
-      <Layout title={selectedCondominium.name} onBack={onBack}>
+      <Layout title={selectedCondominium.name} onBack={onBack} selectedCondominiumId={selectedCondominium.id}>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           <div className="text-lg text-gray-700">Carregando dados...</div>
@@ -155,7 +154,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
 
   if (error) {
     return (
-      <Layout title={selectedCondominium.name} onBack={onBack}>
+      <Layout title={selectedCondominium.name} onBack={onBack} selectedCondominiumId={selectedCondominium.id}>
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <AlertCircle className="h-12 w-12 text-red-500" />
           <div className="text-lg text-red-600 text-center">Erro: {error}</div>
@@ -169,7 +168,7 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
   }
 
   return (
-    <Layout title={selectedCondominium.name} onBack={onBack}>
+    <Layout title={selectedCondominium.name} onBack={onBack} selectedCondominiumId={selectedCondominium.id}>
       <div className="space-y-6">
         {/* Header with Refresh Button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -183,17 +182,6 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
           </div>
           
           <div className="flex gap-2">
-            <Button 
-              onClick={() => {
-                const vigilanteUrl = `/vigilante-checklist?condominium=${selectedCondominium.id}`;
-                window.open(vigilanteUrl, '_blank');
-              }}
-              className="flex items-center gap-2"
-            >
-              <CheckSquare className="h-4 w-4" />
-              Área do Vigilante
-            </Button>
-            
             <Button 
               onClick={handleRefresh}
               variant="outline"

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Users, Copy, LogOut, Download } from 'lucide-react';
@@ -13,7 +12,7 @@ interface LayoutProps {
   onBack?: () => void;
 }
 
-const Layout = ({ children, title, onBack }: LayoutProps) => {
+const Layout = ({ children, title, onBack, selectedCondominiumId }: LayoutProps & { selectedCondominiumId?: string }) => {
   const { signOut, user } = useAuth();
   const { isInstallable, promptInstall } = usePWA();
   const [userLogo, setUserLogo] = useState<string>('/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png');
@@ -49,7 +48,10 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
   }, [user?.id]);
 
   const copyVigilanteLink = () => {
-    const vigilanteUrl = `${window.location.origin}/vigilante-checklist`;
+    let vigilanteUrl = `${window.location.origin}/vigilante-checklist`;
+    if (selectedCondominiumId) {
+      vigilanteUrl += `?condominium=${selectedCondominiumId}`;
+    }
     navigator.clipboard.writeText(vigilanteUrl).then(() => {
       toast.success('Link da área do vigilante copiado!');
     }).catch(() => {
@@ -134,7 +136,13 @@ const Layout = ({ children, title, onBack }: LayoutProps) => {
               
               {/* Vigilante area button */}
               <Button 
-                onClick={() => window.location.href = '/vigilante-checklist'}
+                onClick={() => {
+                  let url = '/vigilante-checklist';
+                  if (selectedCondominiumId) {
+                    url += `?condominium=${selectedCondominiumId}`;
+                  }
+                  window.location.href = url;
+                }}
                 className="bg-green-600 hover:bg-green-700 p-2 sm:px-3"
                 size="sm"
                 title="Área do Vigilante"

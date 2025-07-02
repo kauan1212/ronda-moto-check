@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
 import { Condominium } from '@/types';
+import { toast } from 'sonner';
 
 interface CondominiumCardProps {
   condominium: Condominium;
