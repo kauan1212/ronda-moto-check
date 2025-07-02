@@ -4,17 +4,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { Vigilante, Motorcycle } from '@/types';
 import { toast } from 'sonner';
 
-export const useChecklistData = () => {
+export const useChecklistData = (condominiumId?: string) => {
   const [vigilantes, setVigilantes] = useState<Vigilante[]>([]);
   const [motorcycles, setMotorcycles] = useState<Motorcycle[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching data for condominium:', condominiumId);
+        
+        let vigilantesQuery = supabase.from('vigilantes').select('*');
+        let motorcyclesQuery = supabase.from('motorcycles').select('*');
+        
+        // Filter by condominium if provided
+        if (condominiumId) {
+          vigilantesQuery = vigilantesQuery.eq('condominium_id', condominiumId);
+          motorcyclesQuery = motorcyclesQuery.eq('condominium_id', condominiumId);
+        }
+
         const [vigilantesResult, motorcyclesResult] = await Promise.all([
-          supabase.from('vigilantes').select('*'),
-          supabase.from('motorcycles').select('*')
+          vigilantesQuery,
+          motorcyclesQuery
         ]);
+
+        console.log('Vigilantes found:', vigilantesResult.data?.length);
+        console.log('Motorcycles found:', motorcyclesResult.data?.length);
 
         if (vigilantesResult.data) setVigilantes(vigilantesResult.data);
         if (motorcyclesResult.data) setMotorcycles(motorcyclesResult.data);
@@ -25,7 +39,7 @@ export const useChecklistData = () => {
     };
 
     fetchData();
-  }, []);
+  }, [condominiumId]);
 
   return {
     vigilantes,

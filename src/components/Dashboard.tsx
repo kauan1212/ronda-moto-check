@@ -182,14 +182,27 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             </p>
           </div>
           
-          <Button 
-            onClick={handleRefresh}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Atualizar Dados
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => {
+                const vigilanteUrl = `/vigilante-checklist?condominium=${selectedCondominium.id}`;
+                window.open(vigilanteUrl, '_blank');
+              }}
+              className="flex items-center gap-2"
+            >
+              <CheckSquare className="h-4 w-4" />
+              Área do Vigilante
+            </Button>
+            
+            <Button 
+              onClick={handleRefresh}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar Dados
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}

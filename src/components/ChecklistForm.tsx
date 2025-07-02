@@ -30,7 +30,7 @@ const ChecklistForm = ({ onComplete, condominiumId }: ChecklistFormProps) => {
   const [showSignature, setShowSignature] = useState(false);
   
   const { formData, updateFormData, resetForm } = useChecklistForm();
-  const { vigilantes, motorcycles } = useChecklistData();
+  const { vigilantes, motorcycles } = useChecklistData(condominiumId);
   const { isSaving, handleSave, handleGeneratePDF } = useChecklistOperations();
   
   const {
