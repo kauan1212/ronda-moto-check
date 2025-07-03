@@ -14,6 +14,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { generatePDF } from '@/utils/pdf/pdfGenerator';
+import jsPDF from 'jspdf';
+import { getUserLogo } from '@/utils/pdf/userHelpers';
+import { addHeader, addBasicInfo, addInspectionItems, addPhotosSection, addObservations, addSignature } from '@/utils/pdf/pdfSections';
 
 const AdminPanel = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -147,6 +151,60 @@ const AdminPanel = () => {
     }
   };
 
+  // Função para exportar todos os checklists do condomínio selecionado em um único PDF e deletar após
+  const handleExportChecklists = async () => {
+    if (!selectedCondominiumId || !checklists.length) return;
+    try {
+      const pdf = new jsPDF();
+      for (let i = 0; i < checklists.length; i++) {
+        const checklist = checklists[i];
+        if (i > 0) pdf.addPage();
+        let yPos = 20;
+        const margin = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        // Buscar logo do usuário
+        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        // Header
+        yPos = await addHeader(pdf, userLogo, yPos, margin);
+        // Basic Info
+        yPos = addBasicInfo(pdf, checklist, yPos, margin, pageWidth);
+        // Inspection Items
+        yPos = addInspectionItems(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Photos
+        yPos = await addPhotosSection(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Observations
+        yPos = addObservations(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Signature
+        await addSignature(pdf, checklist, yPos, margin, pageHeight);
+      }
+      const fileName = `checklists-condominio-${selectedCondominium?.name || selectedCondominiumId}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      alert('Erro ao exportar checklists: ' + (err.message || err));
+    }
+  };
+
+  // Função para deletar todos os checklists do condomínio selecionado
+  const handleDeleteChecklists = async () => {
+    if (!selectedCondominiumId || !checklists.length) return;
+    if (!window.confirm('Tem certeza que deseja deletar TODOS os checklists deste condomínio? Esta ação não pode ser desfeita.')) return;
+    try {
+      const { error } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('condominium_id', selectedCondominiumId);
+      if (error) {
+        alert('Erro ao deletar checklists: ' + error.message);
+      } else {
+        alert('Todos os checklists foram deletados com sucesso!');
+        refetchChecklists();
+      }
+    } catch (err) {
+      alert('Erro ao deletar checklists: ' + (err.message || err));
+    }
+  };
+
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -265,6 +323,17 @@ const AdminPanel = () => {
         )}
 
         <TabsContent value="checklists" className="space-y-4 sm:space-y-6">
+          {/* Botões de exportação e deleção de checklists por condomínio, só para admin geral */}
+          {isGeneralAdmin && selectedCondominiumId && checklists.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <Button onClick={handleExportChecklists} variant="default">
+                Exportar Todos os Checklists do Condomínio
+              </Button>
+              <Button onClick={handleDeleteChecklists} variant="destructive">
+                Deletar Todos os Checklists do Condomínio
+              </Button>
+            </div>
+          )}
           {selectedCondominium ? (
             <ChecklistManagement 
               condominium={selectedCondominium}

@@ -135,38 +135,36 @@ export const addPhotosSection = async (pdf: jsPDF, checklistData: Checklist, yPo
     pdf.text(`Fotos do Veículo (${vehiclePhotos.length} fotos):`, margin, yPos);
     yPos += 10;
 
-    const photoWidth = 140; // Aumentado de 120 para 140
-    const photoHeight = 105; // Aumentado de 90 para 105
+    const photoWidth = 90; // Reduzido para melhor encaixe
+    const photoHeight = 70;
     const photosPerRow = 2;
     let currentPhotoIndex = 0;
+    let maxRowHeight = 0;
 
     for (let i = 0; i < vehiclePhotos.length; i++) {
       const photoUrl = vehiclePhotos[i];
-      
-      if (yPos > pageHeight - 120) {
+      if (yPos > pageHeight - photoHeight - 30) {
         pdf.addPage();
         yPos = 20;
         currentPhotoIndex = 0;
+        maxRowHeight = 0;
       }
-
       const xPos = margin + (currentPhotoIndex % photosPerRow) * (photoWidth + 15);
-      
       // Add category label
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
       const categories = ['Frente', 'Trás', 'Lateral Esquerda', 'Lateral Direita', 'Adicional'];
       pdf.text(categories[i % 5] || `Foto ${i + 1}`, xPos, yPos - 2);
-      
-      await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
-
+      const { height: renderedHeight } = await addImageToPDF(pdf, photoUrl, xPos, yPos, photoWidth, photoHeight);
+      if (renderedHeight > maxRowHeight) maxRowHeight = renderedHeight;
       currentPhotoIndex++;
       if (currentPhotoIndex % photosPerRow === 0) {
-        yPos += photoHeight + 25;
+        yPos += maxRowHeight + 20;
+        maxRowHeight = 0;
       }
     }
-
     if (currentPhotoIndex % photosPerRow !== 0) {
-      yPos += photoHeight + 25;
+      yPos += maxRowHeight + 20;
     }
   }
 

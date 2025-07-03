@@ -56,17 +56,36 @@ export const loadImageAsBase64 = async (url: string): Promise<string> => {
   });
 };
 
-export const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number, width: number, height: number): Promise<boolean> => {
+export const addImageToPDF = async (pdf: jsPDF, imageUrl: string, x: number, y: number, maxWidth: number, maxHeight: number): Promise<{width: number, height: number}> => {
   try {
     const base64Image = await loadImageAsBase64(imageUrl);
-    pdf.addImage(base64Image, 'JPEG', x, y, width, height);
-    return true;
+    // Carregar imagem para obter dimensões reais
+    const img = new window.Image();
+    img.src = base64Image;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+    const imgWidth = img.width;
+    const imgHeight = img.height;
+    // Calcular escala proporcional
+    let renderWidth = maxWidth;
+    let renderHeight = (imgHeight / imgWidth) * maxWidth;
+    if (renderHeight > maxHeight) {
+      renderHeight = maxHeight;
+      renderWidth = (imgWidth / imgHeight) * maxHeight;
+    }
+    // Centralizar na célula
+    const xCentered = x + (maxWidth - renderWidth) / 2;
+    const yCentered = y + (maxHeight - renderHeight) / 2;
+    pdf.addImage(base64Image, 'JPEG', xCentered, yCentered, renderWidth, renderHeight);
+    return { width: renderWidth, height: renderHeight };
   } catch (error) {
     console.error('Erro ao adicionar imagem ao PDF:', error);
     pdf.setFontSize(8);
     pdf.setTextColor('#ef4444');
-    pdf.text('Erro ao carregar foto', x, y + height / 2);
+    pdf.text('Erro ao carregar foto', x, y + maxHeight / 2);
     pdf.setTextColor('#000000');
-    return false;
+    return { width: 0, height: 0 };
   }
 };
