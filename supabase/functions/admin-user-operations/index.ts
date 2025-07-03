@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2';
 
@@ -293,6 +292,58 @@ serve(async (req) => {
           success: true, 
           message: 'Password reset email sent successfully' 
         }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'delete_user') {
+      const { userId } = requestBody;
+      console.log('🗑️ Deleting user:', userId);
+
+      // Delete from auth
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.error('❌ Auth delete error:', authError);
+        return new Response(
+          JSON.stringify({ error: authError.message || 'Failed to delete user from auth' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Delete from profiles
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+      if (profileError) {
+        console.error('❌ Profile delete error:', profileError);
+        return new Response(
+          JSON.stringify({ error: profileError.message || 'Failed to delete user profile' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Optionally, delete from user_roles
+      await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      // Log the security event
+      try {
+        await supabaseAdmin.from('security_audit').insert({
+          user_id: user.id,
+          target_user_id: userId,
+          action: 'user_deleted',
+          user_agent: req.headers.get('user-agent')
+        });
+      } catch (auditError) {
+        console.error('⚠️ Audit log error (non-critical):', auditError);
+      }
+
+      console.log('✅ User deleted successfully');
+      return new Response(
+        JSON.stringify({ success: true, message: 'User deleted successfully' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
