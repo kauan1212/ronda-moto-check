@@ -333,6 +333,54 @@ export type Database = {
         }
         Relationships: []
       }
+      trajetos: {
+        Row: {
+          condominium_id: string
+          id: string
+          latitude: number
+          longitude: number
+          observacao: string | null
+          ronda_id: string | null
+          timestamp: string
+          vigilante_id: string
+        }
+        Insert: {
+          condominium_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          observacao?: string | null
+          ronda_id?: string | null
+          timestamp?: string
+          vigilante_id: string
+        }
+        Update: {
+          condominium_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          observacao?: string | null
+          ronda_id?: string | null
+          timestamp?: string
+          vigilante_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trajetos_condominium_id_fkey"
+            columns: ["condominium_id"]
+            isOneToOne: false
+            referencedRelation: "condominiums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trajetos_vigilante_id_fkey"
+            columns: ["vigilante_id"]
+            isOneToOne: false
+            referencedRelation: "vigilantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Clock, UserCheck, UserX } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, UserCheck, UserX, Trash2 } from 'lucide-react';
 import { UserProfile } from './types';
 
 interface AccountStatusManagerProps {
@@ -10,7 +10,9 @@ interface AccountStatusManagerProps {
   onApprove: (userId: string) => void;
   onFreeze: (userId: string) => void;
   onUnfreeze: (userId: string) => void;
+  onDelete?: (userId: string) => void;
   loading?: boolean;
+  deleteLoading?: boolean;
 }
 
 const AccountStatusManager: React.FC<AccountStatusManagerProps> = ({
@@ -18,7 +20,9 @@ const AccountStatusManager: React.FC<AccountStatusManagerProps> = ({
   onApprove,
   onFreeze,
   onUnfreeze,
-  loading = false
+  onDelete,
+  loading = false,
+  deleteLoading = false
 }) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -52,15 +56,28 @@ const AccountStatusManager: React.FC<AccountStatusManagerProps> = ({
     switch (user.account_status) {
       case 'pending':
         return (
-          <Button
-            onClick={() => onApprove(user.id)}
-            disabled={loading}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <UserCheck className="h-4 w-4 mr-1" />
-            Aprovar
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => onApprove(user.id)}
+              disabled={loading || deleteLoading}
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <UserCheck className="h-4 w-4 mr-1" />
+              Aprovar
+            </Button>
+            {onDelete && (
+              <Button
+                onClick={() => onDelete(user.id)}
+                disabled={loading || deleteLoading}
+                variant="destructive"
+                size="sm"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Deletar
+              </Button>
+            )}
+          </div>
         );
       case 'active':
         return (

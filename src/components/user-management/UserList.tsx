@@ -94,7 +94,9 @@ const UserList: React.FC<UserListProps> = ({
                           onApprove={onApprove}
                           onFreeze={onFreeze}
                           onUnfreeze={onUnfreeze}
+                          onDelete={onDelete}
                           loading={statusLoading}
+                          deleteLoading={deleteLoading}
                         />
                       </div>
                     </TableCell>
