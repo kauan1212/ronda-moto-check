@@ -12,6 +12,9 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { generatePDF } from '@/utils/pdfGenerator';
+import jsPDF from 'jspdf';
+import { getUserLogo } from '@/utils/pdf/userHelpers';
+import { addHeader, addBasicInfo, addInspectionItems, addPhotosSection, addObservations, addSignature } from '@/utils/pdf/pdfSections';
 
 interface ChecklistManagementProps {
   condominium: Condominium;
@@ -84,6 +87,60 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
     }
   };
 
+  // Exportar todos os checklists do condomínio em um único PDF
+  const handleExportAllChecklists = async () => {
+    if (!checklists.length) return;
+    try {
+      const pdf = new jsPDF();
+      for (let i = 0; i < checklists.length; i++) {
+        const checklist = checklists[i];
+        if (i > 0) pdf.addPage();
+        let yPos = 20;
+        const margin = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        // Buscar logo do usuário
+        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        // Header
+        yPos = await addHeader(pdf, userLogo, yPos, margin);
+        // Basic Info
+        yPos = addBasicInfo(pdf, checklist, yPos, margin, pageWidth);
+        // Inspection Items
+        yPos = addInspectionItems(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Photos
+        yPos = await addPhotosSection(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Observations
+        yPos = addObservations(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Signature
+        await addSignature(pdf, checklist, yPos, margin, pageHeight);
+      }
+      const fileName = `checklists-condominio-${condominium.name || condominium.id}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      toast.error('Erro ao exportar checklists: ' + (err.message || err));
+    }
+  };
+
+  // Deletar todos os checklists do condomínio
+  const handleDeleteAllChecklists = async () => {
+    if (!checklists.length) return;
+    if (!window.confirm('Tem certeza que deseja deletar TODOS os checklists deste condomínio? Esta ação não pode ser desfeita.')) return;
+    try {
+      const { error } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('condominium_id', condominium.id);
+      if (error) {
+        toast.error('Erro ao deletar checklists: ' + error.message);
+      } else {
+        toast.success('Todos os checklists foram deletados com sucesso!');
+        onUpdate();
+      }
+    } catch (err) {
+      toast.error('Erro ao deletar checklists: ' + (err.message || err));
+    }
+  };
+
   const safeChecklists = Array.isArray(checklists) ? checklists : [];
 
   return (
@@ -97,6 +154,17 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* Botões de exportação/deleção em lote */}
+            {safeChecklists.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <Button onClick={handleExportAllChecklists} variant="default">
+                  Exportar Todos os Checklists do Condomínio
+                </Button>
+                <Button onClick={handleDeleteAllChecklists} variant="destructive">
+                  Deletar Todos os Checklists do Condomínio
+                </Button>
+              </div>
+            )}
             {safeChecklists.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />

@@ -140,13 +140,10 @@ const AdminPanel = () => {
 
   const handleBack = async () => {
     try {
-      console.log('AdminPanel: Signing out user...');
-      await signOut();
-      console.log('AdminPanel: User signed out, navigating to home...');
       navigate('/');
+      await signOut();
     } catch (error) {
       console.error('AdminPanel: Error signing out:', error);
-      // Fallback navigation even if signout fails
       navigate('/');
     }
   };
@@ -323,8 +320,8 @@ const AdminPanel = () => {
         )}
 
         <TabsContent value="checklists" className="space-y-4 sm:space-y-6">
-          {/* Botões de exportação e deleção de checklists por condomínio, só para admin geral */}
-          {isGeneralAdmin && selectedCondominiumId && checklists.length > 0 && (
+          {/* Botões de exportação e deleção de checklists por condomínio, agora para qualquer usuário */}
+          {selectedCondominiumId && checklists.length > 0 && (
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <Button onClick={handleExportChecklists} variant="default">
                 Exportar Todos os Checklists do Condomínio
