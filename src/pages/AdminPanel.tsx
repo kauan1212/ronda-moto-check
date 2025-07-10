@@ -152,16 +152,22 @@ const AdminPanel = () => {
   const handleExportChecklists = async () => {
     if (!selectedCondominiumId || !checklists.length) return;
     try {
+      console.log('Iniciando exportação de checklists...', { selectedCondominiumId, checklistsCount: checklists.length });
+      
       const pdf = new jsPDF();
       for (let i = 0; i < checklists.length; i++) {
         const checklist = checklists[i];
+        console.log(`Processando checklist ${i + 1}/${checklists.length}:`, checklist.id);
+        
         if (i > 0) pdf.addPage();
         let yPos = 20;
         const margin = 20;
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
+        
         // Buscar logo do usuário
         const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        
         // Header
         yPos = await addHeader(pdf, userLogo, yPos, margin);
         // Basic Info
@@ -175,10 +181,15 @@ const AdminPanel = () => {
         // Signature
         await addSignature(pdf, checklist, yPos, margin, pageHeight);
       }
-      const fileName = `checklists-condominio-${selectedCondominium?.name || selectedCondominiumId}.pdf`;
+      
+      const fileName = `checklists-condominio-${selectedCondominium?.name?.replace(/[^a-zA-Z0-9]/g, '-') || selectedCondominiumId}.pdf`;
+      console.log('Salvando arquivo:', fileName);
       pdf.save(fileName);
+      console.log('Exportação concluída com sucesso!');
+      
     } catch (err) {
-      alert('Erro ao exportar checklists: ' + (err.message || err));
+      console.error('Erro ao exportar checklists:', err);
+      alert('Erro ao exportar checklists: ' + (err instanceof Error ? err.message : String(err)));
     }
   };
 
