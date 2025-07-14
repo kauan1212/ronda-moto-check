@@ -133,6 +133,72 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
     }
   };
 
+  // Função para baixar PDF e deletar todos os checklists
+  const handleDownloadAndDelete = async () => {
+    if (!checklists.length) return;
+    
+    if (!window.confirm('Esta ação irá baixar o PDF com todos os checklists e depois deletá-los permanentemente. Tem certeza que deseja continuar? Esta ação não pode ser desfeita.')) return;
+    
+    try {
+      // Primeiro, gerar e baixar o PDF
+      console.log('Iniciando exportação de checklists antes de deletar...', { checklistsCount: checklists.length });
+      
+      const pdf = new jsPDF();
+      for (let i = 0; i < checklists.length; i++) {
+        const checklist = checklists[i];
+        console.log(`Processando checklist ${i + 1}/${checklists.length}:`, checklist.id);
+        
+        if (i > 0) pdf.addPage();
+        let yPos = 20;
+        const margin = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Buscar logo do usuário
+        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        
+        // Header
+        yPos = await addHeader(pdf, userLogo, yPos, margin);
+        // Basic Info
+        yPos = addBasicInfo(pdf, checklist, yPos, margin, pageWidth);
+        // Inspection Items
+        yPos = addInspectionItems(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Photos
+        yPos = await addPhotosSection(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Observations
+        yPos = addObservations(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Signature
+        await addSignature(pdf, checklist, yPos, margin, pageHeight);
+      }
+      
+      const fileName = `checklists-condominio-${condominium.name?.replace(/[^a-zA-Z0-9]/g, '-') || condominium.id}.pdf`;
+      console.log('Salvando arquivo:', fileName);
+      pdf.save(fileName);
+      console.log('Exportação concluída com sucesso!');
+      toast.success('PDF baixado com sucesso! Agora deletando os checklists...');
+      
+      // Aguardar um pouco para garantir que o download foi iniciado
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Depois, deletar todos os checklists
+      const { error } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('condominium_id', condominium.id);
+        
+      if (error) {
+        toast.error('PDF baixado, mas erro ao deletar checklists: ' + error.message);
+      } else {
+        toast.success('PDF baixado e todos os checklists foram deletados com sucesso!');
+        onUpdate();
+      }
+      
+    } catch (err) {
+      console.error('Erro no processo de download e delete:', err);
+      toast.error('Erro no processo: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   // Deletar todos os checklists do condomínio
   const handleDeleteAllChecklists = async () => {
     if (!checklists.length) return;
@@ -169,11 +235,17 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
             {/* Botões de exportação/deleção em lote */}
             {safeChecklists.length > 0 && (
               <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                <Button onClick={handleExportAllChecklists} variant="default">
-                  Exportar Todos os Checklists do Condomínio
+                <Button onClick={handleDownloadAndDelete} variant="default" className="bg-green-600 hover:bg-green-700">
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar PDF e Deletar Todos os Checklists
+                </Button>
+                <Button onClick={handleExportAllChecklists} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Apenas Exportar PDF
                 </Button>
                 <Button onClick={handleDeleteAllChecklists} variant="destructive">
-                  Deletar Todos os Checklists do Condomínio
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Apenas Deletar Todos
                 </Button>
               </div>
             )}
