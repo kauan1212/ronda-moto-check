@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Car, CheckSquare, Image, UserCog, ArrowLeft } from 'lucide-react';
+import { Building2, Users, Car, CheckSquare, Image, UserCog, ArrowLeft, Download, Trash2 } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import VigilanteManagement from '@/components/VigilanteManagement';
 import MotorcycleManagement from '@/components/MotorcycleManagement';
@@ -18,6 +18,7 @@ import { generatePDF } from '@/utils/pdf/pdfGenerator';
 import jsPDF from 'jspdf';
 import { getUserLogo } from '@/utils/pdf/userHelpers';
 import { addHeader, addBasicInfo, addInspectionItems, addPhotosSection, addObservations, addSignature } from '@/utils/pdf/pdfSections';
+import { toast } from 'sonner';
 
 const AdminPanel = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -145,6 +146,207 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('AdminPanel: Error signing out:', error);
       navigate('/');
+    }
+  };
+
+  // Função para baixar PDF de um condomínio específico e deletar seus checklists
+  const handleDownloadAndDeleteCondominium = async (condominiumId: string) => {
+    try {
+      // Buscar checklists do condomínio
+      const { data: condominiumChecklists, error: checklistsError } = await supabase
+        .from('checklists')
+        .select('*')
+        .eq('condominium_id', condominiumId)
+        .order('created_at', { ascending: false });
+
+      if (checklistsError) {
+        toast.error('Erro ao buscar checklists: ' + checklistsError.message);
+        return;
+      }
+
+      if (!condominiumChecklists || condominiumChecklists.length === 0) {
+        toast.error('Nenhum checklist encontrado para este condomínio');
+        return;
+      }
+
+      const condominium = condominiums.find(c => c.id === condominiumId);
+      if (!condominium) {
+        toast.error('Condomínio não encontrado');
+        return;
+      }
+
+      if (!window.confirm(`Esta ação irá baixar o PDF com todos os checklists do condomínio "${condominium.name}" e depois deletá-los permanentemente. Tem certeza que deseja continuar? Esta ação não pode ser desfeita.`)) {
+        return;
+      }
+
+      toast.success('Preparando download do PDF...');
+
+      // Gerar PDF
+      const pdf = new jsPDF();
+      for (let i = 0; i < condominiumChecklists.length; i++) {
+        const checklist = condominiumChecklists[i];
+        console.log(`Processando checklist ${i + 1}/${condominiumChecklists.length}:`, checklist.id);
+        
+        if (i > 0) pdf.addPage();
+        let yPos = 20;
+        const margin = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Buscar logo do usuário
+        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        
+        // Header
+        yPos = await addHeader(pdf, userLogo, yPos, margin);
+        // Basic Info
+        yPos = addBasicInfo(pdf, checklist, yPos, margin, pageWidth);
+        // Inspection Items
+        yPos = addInspectionItems(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Photos
+        yPos = await addPhotosSection(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Observations
+        yPos = addObservations(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Signature
+        await addSignature(pdf, checklist, yPos, margin, pageHeight);
+      }
+      
+      const fileName = `checklists-${condominium.name?.replace(/[^a-zA-Z0-9]/g, '-') || condominiumId}.pdf`;
+      pdf.save(fileName);
+      toast.success('PDF baixado com sucesso! Agora deletando os checklists...');
+      
+      // Aguardar um pouco para garantir que o download foi iniciado
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Deletar checklists
+      const { error: deleteError } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('condominium_id', condominiumId);
+        
+      if (deleteError) {
+        toast.error('PDF baixado, mas erro ao deletar checklists: ' + deleteError.message);
+      } else {
+        toast.success(`PDF baixado e todos os checklists do condomínio "${condominium.name}" foram deletados com sucesso!`);
+        refetchChecklists();
+      }
+      
+    } catch (err) {
+      console.error('Erro no processo de download e delete:', err);
+      toast.error('Erro no processo: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  // Função para apenas baixar PDF de um condomínio específico
+  const handleExportCondominiumChecklists = async (condominiumId: string) => {
+    try {
+      // Buscar checklists do condomínio
+      const { data: condominiumChecklists, error: checklistsError } = await supabase
+        .from('checklists')
+        .select('*')
+        .eq('condominium_id', condominiumId)
+        .order('created_at', { ascending: false });
+
+      if (checklistsError) {
+        toast.error('Erro ao buscar checklists: ' + checklistsError.message);
+        return;
+      }
+
+      if (!condominiumChecklists || condominiumChecklists.length === 0) {
+        toast.error('Nenhum checklist encontrado para este condomínio');
+        return;
+      }
+
+      const condominium = condominiums.find(c => c.id === condominiumId);
+      if (!condominium) {
+        toast.error('Condomínio não encontrado');
+        return;
+      }
+
+      toast.success('Preparando download do PDF...');
+
+      // Gerar PDF
+      const pdf = new jsPDF();
+      for (let i = 0; i < condominiumChecklists.length; i++) {
+        const checklist = condominiumChecklists[i];
+        console.log(`Processando checklist ${i + 1}/${condominiumChecklists.length}:`, checklist.id);
+        
+        if (i > 0) pdf.addPage();
+        let yPos = 20;
+        const margin = 20;
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Buscar logo do usuário
+        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        
+        // Header
+        yPos = await addHeader(pdf, userLogo, yPos, margin);
+        // Basic Info
+        yPos = addBasicInfo(pdf, checklist, yPos, margin, pageWidth);
+        // Inspection Items
+        yPos = addInspectionItems(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Photos
+        yPos = await addPhotosSection(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Observations
+        yPos = addObservations(pdf, checklist, yPos, margin, pageWidth, pageHeight);
+        // Signature
+        await addSignature(pdf, checklist, yPos, margin, pageHeight);
+      }
+      
+      const fileName = `checklists-${condominium.name?.replace(/[^a-zA-Z0-9]/g, '-') || condominiumId}.pdf`;
+      pdf.save(fileName);
+      toast.success('PDF exportado com sucesso!');
+      
+    } catch (err) {
+      console.error('Erro ao exportar checklists:', err);
+      toast.error('Erro ao exportar checklists: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  // Função para deletar todos os checklists de um condomínio específico
+  const handleDeleteCondominiumChecklists = async (condominiumId: string) => {
+    try {
+      // Buscar checklists do condomínio para verificar se existem
+      const { data: condominiumChecklists, error: checklistsError } = await supabase
+        .from('checklists')
+        .select('id')
+        .eq('condominium_id', condominiumId);
+
+      if (checklistsError) {
+        toast.error('Erro ao verificar checklists: ' + checklistsError.message);
+        return;
+      }
+
+      if (!condominiumChecklists || condominiumChecklists.length === 0) {
+        toast.error('Nenhum checklist encontrado para este condomínio');
+        return;
+      }
+
+      const condominium = condominiums.find(c => c.id === condominiumId);
+      if (!condominium) {
+        toast.error('Condomínio não encontrado');
+        return;
+      }
+
+      if (!window.confirm(`Tem certeza que deseja deletar TODOS os ${condominiumChecklists.length} checklists do condomínio "${condominium.name}"? Esta ação não pode ser desfeita.`)) {
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from('checklists')
+        .delete()
+        .eq('condominium_id', condominiumId);
+        
+      if (deleteError) {
+        toast.error('Erro ao deletar checklists: ' + deleteError.message);
+      } else {
+        toast.success(`Todos os checklists do condomínio "${condominium.name}" foram deletados com sucesso!`);
+        refetchChecklists();
+      }
+      
+    } catch (err) {
+      console.error('Erro ao deletar checklists:', err);
+      toast.error('Erro ao deletar checklists: ' + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -288,7 +490,13 @@ const AdminPanel = () => {
         </div>
 
         <TabsContent value="condominiums" className="space-y-4 sm:space-y-6">
-          <CondominiumManagement onSelect={handleCondominiumSelect} />
+          <CondominiumManagement 
+            onSelect={handleCondominiumSelect} 
+            onExportChecklists={handleExportCondominiumChecklists}
+            onDeleteChecklists={handleDeleteCondominiumChecklists}
+            onDownloadAndDelete={handleDownloadAndDeleteCondominium}
+            isGeneralAdmin={isGeneralAdmin}
+          />
         </TabsContent>
 
         {/* Tab de usuários apenas para super admin */}

@@ -11,9 +11,13 @@ import CondominiumEmptyState from '@/components/condominium/CondominiumEmptyStat
 
 interface CondominiumManagementProps {
   onSelect: (condominium: Condominium) => void;
+  onExportChecklists?: (condominiumId: string) => Promise<void>;
+  onDeleteChecklists?: (condominiumId: string) => Promise<void>;
+  onDownloadAndDelete?: (condominiumId: string) => Promise<void>;
+  isGeneralAdmin?: boolean;
 }
 
-const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
+const CondominiumManagement = ({ onSelect, onExportChecklists, onDeleteChecklists, onDownloadAndDelete, isGeneralAdmin: propIsGeneralAdmin }: CondominiumManagementProps) => {
   const { user, loading: authLoading } = useAuth();
   const { loading: condominiumLoading, saveCondominium, deleteCondominium } = useCondominiumOperations();
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
@@ -21,7 +25,7 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
   const [editingCondominium, setEditingCondominium] = useState<Condominium | null>(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  const isGeneralAdmin = user?.email === 'kauankg@hotmail.com';
+  const isGeneralAdmin = propIsGeneralAdmin || user?.email === 'kauankg@hotmail.com';
 
   // Auto-refresh simples que executa apenas uma vez ao acessar a página
   useEffect(() => {
@@ -158,6 +162,10 @@ const CondominiumManagement = ({ onSelect }: CondominiumManagementProps) => {
                 onDelete={handleDelete}
                 onSelect={onSelect}
                 canEdit={isGeneralAdmin || condominium.user_id === user?.id}
+                onExportChecklists={onExportChecklists}
+                onDeleteChecklists={onDeleteChecklists}
+                onDownloadAndDelete={onDownloadAndDelete}
+                showChecklistActions={!!onExportChecklists || !!onDeleteChecklists || !!onDownloadAndDelete}
               />
             );
           })}

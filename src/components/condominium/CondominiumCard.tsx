@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
+import { Building2, Edit, Trash2, MapPin, Phone, Mail, Download, FileX } from 'lucide-react';
 import { Condominium } from '@/types';
 import { toast } from 'sonner';
 
@@ -11,9 +11,23 @@ interface CondominiumCardProps {
   onDelete: (condominium: Condominium) => void;
   onSelect: (condominium: Condominium) => void;
   canEdit: boolean;
+  onExportChecklists?: (condominiumId: string) => Promise<void>;
+  onDeleteChecklists?: (condominiumId: string) => Promise<void>;
+  onDownloadAndDelete?: (condominiumId: string) => Promise<void>;
+  showChecklistActions?: boolean;
 }
 
-const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect, canEdit }: CondominiumCardProps) => {
+const CondominiumCard = ({ 
+  condominium, 
+  onEdit, 
+  onDelete, 
+  onSelect, 
+  canEdit,
+  onExportChecklists,
+  onDeleteChecklists,
+  onDownloadAndDelete,
+  showChecklistActions
+}: CondominiumCardProps) => {
   return (
     <Card className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
       <CardHeader className="pb-3">
@@ -63,6 +77,51 @@ const CondominiumCard = ({ condominium, onEdit, onDelete, onSelect, canEdit }: C
             <span className="break-words">{condominium.email}</span>
           </div>
         )}
+        
+        {/* Botões de ações de checklist (apenas para admin geral) */}
+        {showChecklistActions && (
+          <div className="space-y-2 pt-3 border-t">
+            <div className="text-xs font-medium text-muted-foreground">Ações de Checklist:</div>
+            <div className="flex flex-col gap-1">
+              {onDownloadAndDelete && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onDownloadAndDelete(condominium.id)}
+                  className="bg-green-600 hover:bg-green-700 text-xs w-full"
+                >
+                  <Download className="h-3 w-3 mr-2" />
+                  Baixar PDF e Deletar Checklists
+                </Button>
+              )}
+              <div className="flex gap-1">
+                {onExportChecklists && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onExportChecklists(condominium.id)}
+                    className="text-xs flex-1"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    Apenas Baixar
+                  </Button>
+                )}
+                {onDeleteChecklists && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDeleteChecklists(condominium.id)}
+                    className="text-xs flex-1"
+                  >
+                    <FileX className="h-3 w-3 mr-1" />
+                    Apenas Deletar
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
         <Button 
           onClick={() => onSelect(condominium)}
           className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-sm sm:text-base"
