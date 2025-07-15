@@ -1,11 +1,12 @@
 
-const CACHE_NAME = 'vigio-system-v1.0.0';
+const CACHE_NAME = 'vigio-system-v1.0.1';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/index.html',
   '/manifest.json',
-  '/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png'
+  // Ícones principais
+  '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png',
+  // Outros assets podem ser adicionados dinamicamente
 ];
 
 // Install Service Worker
@@ -13,23 +14,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Cache opened');
         return cache.addAll(urlsToCache);
       })
-      .then(() => {
-        return self.skipWaiting();
-      })
-  );
-});
-
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -40,21 +27,49 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim())
   );
+});
+
+// Fetch event: Cache-first for static, network-first for HTML
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  if (req.headers.get('accept')?.includes('text/html')) {
+    // Network first for HTML
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+          return res;
+        })
+        .catch(() => caches.match(req).then((res) => res || caches.match('/')))
+    );
+  } else {
+    // Cache first for static assets
+    event.respondWith(
+      caches.match(req).then((res) => {
+        return res || fetch(req).then((fetchRes) => {
+          if (fetchRes.status === 200) {
+            const resClone = fetchRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+          }
+          return fetchRes;
+        });
+      })
+    );
+  }
 });
 
 // Handle background sync
 self.addEventListener('sync', (event) => {
   if (event.tag === 'background-sync') {
-    console.log('Background sync triggered');
+    // Implement background sync logic if needed
   }
 });
 
@@ -62,8 +77,8 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'Nova notificação do Vigio System',
-    icon: '/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png',
-    badge: '/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png',
+    icon: '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png',
+    badge: '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png',
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
@@ -73,12 +88,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'explore',
         title: 'Abrir App',
-        icon: '/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png'
+        icon: '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png'
       },
       {
         action: 'close',
         title: 'Fechar',
-        icon: '/lovable-uploads/76e5d7a2-ec38-4d25-9617-44c828e4f1f8.png'
+        icon: '/lovable-uploads/3ff36fea-6d51-4fea-a019-d8989718b9cd.png'
       }
     ]
   };
@@ -91,10 +106,7 @@ self.addEventListener('push', (event) => {
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    );
+    event.waitUntil(clients.openWindow('/'));
   }
 });
