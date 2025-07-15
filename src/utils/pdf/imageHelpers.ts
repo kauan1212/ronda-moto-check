@@ -1,5 +1,33 @@
 import jsPDF from 'jspdf';
 
+// Função auxiliar para ler orientação EXIF de uma imagem
+function getOrientation(file, callback) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const view = new DataView(e.target.result);
+    if (view.getUint16(0, false) !== 0xFFD8) return callback(-2);
+    let length = view.byteLength, offset = 2;
+    while (offset < length) {
+      if (view.getUint16(offset + 2, false) <= 8) return callback(-1);
+      let marker = view.getUint16(offset, false);
+      offset += 2;
+      if (marker === 0xFFE1) {
+        if (view.getUint32(offset += 2, false) !== 0x45786966) return callback(-1);
+        let little = view.getUint16(offset += 6, false) === 0x4949;
+        offset += view.getUint32(offset + 4, little);
+        let tags = view.getUint16(offset, little);
+        offset += 2;
+        for (let i = 0; i < tags; i++)
+          if (view.getUint16(offset + (i * 12), little) === 0x0112)
+            return callback(view.getUint16(offset + (i * 12) + 8, little));
+      } else if ((marker & 0xFF00) !== 0xFF00) break;
+      else offset += view.getUint16(offset, false);
+    }
+    return callback(-1);
+  };
+  reader.readAsArrayBuffer(file.slice(0, 64 * 1024));
+}
+
 export const loadImageAsBase64 = async (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!url || typeof url !== 'string') {
@@ -15,30 +43,49 @@ export const loadImageAsBase64 = async (url: string): Promise<string> => {
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
         if (!ctx) {
           reject('Erro ao criar contexto do canvas');
           return;
         }
-
-        // Aumentar a resolução para melhor qualidade
-        const scale = 2;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        
-        // Configurar contexto para melhor qualidade
+        // Buscar orientação EXIF se possível
+        let orientation = 1;
+        try {
+          const response = await fetch(url, { mode: 'cors' });
+          const blob = await response.blob();
+          await new Promise((res) => getOrientation(blob, (o) => { orientation = o; res(undefined); }));
+        } catch (e) { orientation = 1; }
+        // Ajustar canvas conforme orientação
+        let width = img.width, height = img.height;
+        let drawWidth = width, drawHeight = height;
+        let rotate = false;
+        if (orientation > 4) { // landscape
+          canvas.width = height;
+          canvas.height = width;
+          rotate = true;
+        } else {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        ctx.save();
+        // Rotacionar se necessário
+        switch (orientation) {
+          case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
+          case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
+          case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
+          case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;
+          case 6: ctx.transform(0, 1, -1, 0, height, 0); break;
+          case 7: ctx.transform(0, -1, -1, 0, height, width); break;
+          case 8: ctx.transform(0, -1, 1, 0, 0, width); break;
+          default: break;
+        }
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.scale(scale, scale);
-        
         ctx.drawImage(img, 0, 0);
-        
-        // Aumentar qualidade JPEG para 100%
+        ctx.restore();
         const base64 = canvas.toDataURL('image/jpeg', 1.0);
         resolve(base64);
       } catch (error) {
@@ -46,12 +93,10 @@ export const loadImageAsBase64 = async (url: string): Promise<string> => {
         reject('Erro ao processar imagem');
       }
     };
-    
     img.onerror = () => {
       console.error('Erro ao carregar imagem:', url);
       reject('Erro ao carregar imagem');
     };
-    
     img.src = url;
   });
 };

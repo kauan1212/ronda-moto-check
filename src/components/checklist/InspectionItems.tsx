@@ -26,7 +26,7 @@ const InspectionItems = ({ formData, onFormDataChange }: InspectionItemsProps) =
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Itens de Verificação da Motocicleta</CardTitle>
+        <CardTitle>Itens de Verificação do Veículo</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {inspectionItems.map((item) => (

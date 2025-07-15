@@ -114,7 +114,7 @@ const Layout = ({ children, title, onBack, selectedCondominiumId }: LayoutProps 
                 <Button 
                   onClick={handleInstall}
                   variant="outline"
-                  className="hidden lg:flex items-center gap-2"
+                  className="flex items-center gap-2"
                   size="sm"
                 >
                   <Download className="h-4 w-4" />

@@ -35,7 +35,7 @@ const PersonnelSelection = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />
-          Seleção do Vigilante e Motocicleta
+          Seleção do Vigilante e Veículo
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -57,10 +57,10 @@ const PersonnelSelection = ({
           </div>
 
           <div>
-            <Label htmlFor="motorcycle">Motocicleta</Label>
+            <Label htmlFor="motorcycle">Veículo</Label>
             <Select value={motorcycleId} onValueChange={onMotorcycleChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a motocicleta" />
+                <SelectValue placeholder="Selecione o veículo" />
               </SelectTrigger>
               <SelectContent>
                 {motorcycles.map((motorcycle) => (
