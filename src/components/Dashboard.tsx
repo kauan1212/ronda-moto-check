@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Bike, CheckSquare, RefreshCw, AlertCircle } from 'lucide-react';
+import { Users, Bike, CheckSquare, RefreshCw, AlertCircle, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Condominium, Vigilante, Motorcycle, Checklist } from '@/types';
@@ -244,7 +244,8 @@ const Dashboard = ({ selectedCondominium, onBack }: DashboardProps) => {
             </TabsTrigger>
             <TabsTrigger value="motorcycles" className="flex items-center gap-2">
               <Bike className="h-4 w-4" />
-              Motocicletas
+              <Car className="h-4 w-4 ml-[-8px]" />
+              Veículos
             </TabsTrigger>
             <TabsTrigger value="checklists" className="flex items-center gap-2">
               <CheckSquare className="h-4 w-4" />

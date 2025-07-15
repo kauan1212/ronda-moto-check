@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Car, CheckSquare, Image, UserCog, ArrowLeft, Download, Trash2 } from 'lucide-react';
+import { Building2, Users, Car, CheckSquare, Image, UserCog, ArrowLeft, Download, Trash2, Bike } from 'lucide-react';
 import CondominiumManagement from '@/components/CondominiumManagement';
 import VigilanteManagement from '@/components/VigilanteManagement';
 import MotorcycleManagement from '@/components/MotorcycleManagement';
@@ -691,7 +691,8 @@ const AdminPanel = () => {
                   <span className="sm:hidden">Vigil.</span>
                 </TabsTrigger>
                 <TabsTrigger value="motorcycles" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4 whitespace-nowrap">
-                  <Car className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <Bike className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <Car className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 ml-[-8px]" />
                   <span className="hidden sm:inline">Veículos</span>
                   <span className="sm:hidden">Veíc.</span>
                 </TabsTrigger>
