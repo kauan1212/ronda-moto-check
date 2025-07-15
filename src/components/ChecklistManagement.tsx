@@ -166,8 +166,19 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
           
-          // Buscar logo do usuário
-          const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+          // Buscar logo do usuário com timeout
+          const userLogoPromise = getUserLogo(checklist.vigilante_id || undefined);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logo fetch timeout')), 5000)
+          );
+          
+          let userLogo;
+          try {
+            userLogo = await Promise.race([userLogoPromise, timeoutPromise]);
+          } catch (logoError) {
+            console.warn(`⚠️ Erro ao buscar logo do vigilante ${checklist.vigilante_id}:`, logoError);
+            userLogo = null;
+          }
           
           // Header
           yPos = await addHeader(pdf, userLogo, yPos, margin);
@@ -256,8 +267,19 @@ const ChecklistManagement = ({ condominium, checklists, onUpdate }: ChecklistMan
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
           
-          // Buscar logo do usuário
-          const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+          // Buscar logo do usuário com timeout
+          const userLogoPromise = getUserLogo(checklist.vigilante_id || undefined);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logo fetch timeout')), 5000)
+          );
+          
+          let userLogo;
+          try {
+            userLogo = await Promise.race([userLogoPromise, timeoutPromise]);
+          } catch (logoError) {
+            console.warn(`⚠️ Erro ao buscar logo do vigilante ${checklist.vigilante_id}:`, logoError);
+            userLogo = null;
+          }
           
           // Header
           yPos = await addHeader(pdf, userLogo, yPos, margin);

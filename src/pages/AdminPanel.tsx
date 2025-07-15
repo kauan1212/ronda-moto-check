@@ -195,25 +195,56 @@ const AdminPanel = () => {
     try {
       console.log('🔄 Iniciando busca de checklists para condomínio:', condominiumId);
       
-      // Buscar checklists do condomínio com tratamento de erro
-      const { data: rawChecklists, error: checklistsError } = await supabase
+      // Primeiro, contar quantos checklists existem
+      const { count: totalChecklists, error: countError } = await supabase
         .from('checklists')
-        .select('*')
-        .eq('condominium_id', condominiumId)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact', head: true })
+        .eq('condominium_id', condominiumId);
 
-      if (checklistsError) {
-        console.error('❌ Erro ao buscar checklists:', checklistsError);
-        toast.error('Erro ao buscar checklists: ' + checklistsError.message);
+      if (countError) {
+        console.error('❌ Erro ao contar checklists:', countError);
+        toast.error('Erro ao contar checklists: ' + countError.message);
         return;
       }
 
-      if (!rawChecklists || rawChecklists.length === 0) {
+      if (!totalChecklists || totalChecklists === 0) {
         toast.error('Nenhum checklist encontrado para este condomínio');
         return;
       }
 
-      console.log('📋 Checklists encontrados:', rawChecklists.length);
+      console.log(`📊 Total de checklists encontrados: ${totalChecklists}`);
+
+      // Buscar checklists em lotes para evitar timeout
+      const batchSize = 50; // Buscar 50 por vez
+      const rawChecklists: any[] = [];
+      
+      for (let offset = 0; offset < totalChecklists; offset += batchSize) {
+        console.log(`📥 Buscando lote ${Math.floor(offset / batchSize) + 1}/${Math.ceil(totalChecklists / batchSize)}`);
+        
+        const { data: batch, error: batchError } = await supabase
+          .from('checklists')
+          .select('*')
+          .eq('condominium_id', condominiumId)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (batchError) {
+          console.error('❌ Erro ao buscar lote de checklists:', batchError);
+          toast.error('Erro ao buscar checklists: ' + batchError.message);
+          return;
+        }
+
+        if (batch) {
+          rawChecklists.push(...batch);
+        }
+
+        // Pequena pausa entre lotes para não sobrecarregar
+        if (offset + batchSize < totalChecklists) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`✅ Total de checklists carregados: ${rawChecklists.length}`);
 
       // Sanitizar dados dos checklists
       const condominiumChecklists = rawChecklists.map((checklist, index) => {
@@ -261,8 +292,19 @@ const AdminPanel = () => {
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
           
-          // Buscar logo do usuário
-          const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+          // Buscar logo do usuário com timeout
+          const userLogoPromise = getUserLogo(checklist.vigilante_id || undefined);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logo fetch timeout')), 5000)
+          );
+          
+          let userLogo;
+          try {
+            userLogo = await Promise.race([userLogoPromise, timeoutPromise]);
+          } catch (logoError) {
+            console.warn(`⚠️ Erro ao buscar logo do vigilante ${checklist.vigilante_id}:`, logoError);
+            userLogo = null;
+          }
           
           // Header
           yPos = await addHeader(pdf, userLogo, yPos, margin);
@@ -329,23 +371,56 @@ const AdminPanel = () => {
     try {
       console.log('🔄 Iniciando exportação de checklists para condomínio:', condominiumId);
       
-      // Buscar checklists do condomínio
-      const { data: rawChecklists, error: checklistsError } = await supabase
+      // Primeiro, contar quantos checklists existem
+      const { count: totalChecklists, error: countError } = await supabase
         .from('checklists')
-        .select('*')
-        .eq('condominium_id', condominiumId)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact', head: true })
+        .eq('condominium_id', condominiumId);
 
-      if (checklistsError) {
-        console.error('❌ Erro ao buscar checklists:', checklistsError);
-        toast.error('Erro ao buscar checklists: ' + checklistsError.message);
+      if (countError) {
+        console.error('❌ Erro ao contar checklists:', countError);
+        toast.error('Erro ao contar checklists: ' + countError.message);
         return;
       }
 
-      if (!rawChecklists || rawChecklists.length === 0) {
+      if (!totalChecklists || totalChecklists === 0) {
         toast.error('Nenhum checklist encontrado para este condomínio');
         return;
       }
+
+      console.log(`📊 Total de checklists encontrados: ${totalChecklists}`);
+
+      // Buscar checklists em lotes para evitar timeout
+      const batchSize = 50; // Buscar 50 por vez
+      const rawChecklists: any[] = [];
+      
+      for (let offset = 0; offset < totalChecklists; offset += batchSize) {
+        console.log(`📥 Buscando lote ${Math.floor(offset / batchSize) + 1}/${Math.ceil(totalChecklists / batchSize)}`);
+        
+        const { data: batch, error: batchError } = await supabase
+          .from('checklists')
+          .select('*')
+          .eq('condominium_id', condominiumId)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + batchSize - 1);
+
+        if (batchError) {
+          console.error('❌ Erro ao buscar lote de checklists:', batchError);
+          toast.error('Erro ao buscar checklists: ' + batchError.message);
+          return;
+        }
+
+        if (batch) {
+          rawChecklists.push(...batch);
+        }
+
+        // Pequena pausa entre lotes para não sobrecarregar
+        if (offset + batchSize < totalChecklists) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`✅ Total de checklists carregados: ${rawChecklists.length}`);
 
       // Sanitizar dados dos checklists
       const condominiumChecklists = rawChecklists.map((checklist, index) => {
@@ -386,8 +461,19 @@ const AdminPanel = () => {
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
           
-          // Buscar logo do usuário
-          const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+          // Buscar logo do usuário com timeout
+          const userLogoPromise = getUserLogo(checklist.vigilante_id || undefined);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Logo fetch timeout')), 5000)
+          );
+          
+          let userLogo;
+          try {
+            userLogo = await Promise.race([userLogoPromise, timeoutPromise]);
+          } catch (logoError) {
+            console.warn(`⚠️ Erro ao buscar logo do vigilante ${checklist.vigilante_id}:`, logoError);
+            userLogo = null;
+          }
           
           // Header
           yPos = await addHeader(pdf, userLogo, yPos, margin);
@@ -492,8 +578,19 @@ const AdminPanel = () => {
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         
-        // Buscar logo do usuário
-        const userLogo = await getUserLogo(checklist.vigilante_id || undefined);
+        // Buscar logo do usuário com timeout
+        const userLogoPromise = getUserLogo(checklist.vigilante_id || undefined);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Logo fetch timeout')), 5000)
+        );
+        
+        let userLogo;
+        try {
+          userLogo = await Promise.race([userLogoPromise, timeoutPromise]);
+        } catch (logoError) {
+          console.warn(`⚠️ Erro ao buscar logo do vigilante ${checklist.vigilante_id}:`, logoError);
+          userLogo = null;
+        }
         
         // Header
         yPos = await addHeader(pdf, userLogo, yPos, margin);
