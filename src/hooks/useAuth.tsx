@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,7 +36,7 @@ export const useAuth = () => {
             isAdmin,
           });
 
-          // Background profile check for non-admin users
+          // Background profile check for non-admin users only
           if (!isAdmin) {
             setTimeout(async () => {
               try {
@@ -51,7 +51,7 @@ export const useAuth = () => {
                   await supabase.auth.signOut();
                 }
               } catch (error) {
-                // Ignore profile check errors
+                console.error('Erro ao verificar perfil:', error);
               }
             }, 100);
           }
