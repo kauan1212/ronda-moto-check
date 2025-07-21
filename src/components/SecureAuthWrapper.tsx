@@ -25,10 +25,10 @@ const SecureAuthWrapper = () => {
     }
   }, [loading]);
 
-  // Minimal security check only when absolutely necessary
+  // Security check for all non-admin users (including vigilantes)
   useEffect(() => {
     if (user && !loading && !isAdmin) {
-      // Only check if user might have access violations, don't block UI
+      // Check account status for all non-admin users
       setTimeout(async () => {
         try {
           const { data: profile } = await supabase
@@ -38,11 +38,12 @@ const SecureAuthWrapper = () => {
             .maybeSingle();
 
           if (profile?.account_status === 'frozen') {
+            console.log('🚫 Conta congelada detectada - forçando logout');
             setHasAccessViolation(true);
             await supabase.auth.signOut();
           }
         } catch (error) {
-          // Ignore errors - don't block user
+          console.error('Erro ao verificar status da conta:', error);
         }
       }, 500); // Delay to not block initial render
     }

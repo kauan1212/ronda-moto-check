@@ -4,7 +4,9 @@ import jsPDF from 'jspdf';
 function getOrientation(file, callback) {
   const reader = new FileReader();
   reader.onload = function (e) {
-    const view = new DataView(e.target.result);
+    const result = e.target?.result;
+    if (!result || typeof result === 'string') return callback(-2);
+    const view = new DataView(result);
     if (view.getUint16(0, false) !== 0xFFD8) return callback(-2);
     let length = view.byteLength, offset = 2;
     while (offset < length) {

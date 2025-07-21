@@ -36,22 +36,25 @@ export const useAuth = () => {
             isAdmin,
           });
 
-          // Background profile check without blocking auth
-          setTimeout(async () => {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('account_status')
-                .eq('id', session.user.id)
-                .maybeSingle();
+          // Background profile check for non-admin users
+          if (!isAdmin) {
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('account_status')
+                  .eq('id', session.user.id)
+                  .maybeSingle();
 
-              if (profile?.account_status === 'frozen' && mounted) {
-                await supabase.auth.signOut();
+                if (profile?.account_status === 'frozen' && mounted) {
+                  console.log('🚫 Conta congelada detectada no useAuth - forçando logout');
+                  await supabase.auth.signOut();
+                }
+              } catch (error) {
+                // Ignore profile check errors
               }
-            } catch (error) {
-              // Ignore profile check errors
-            }
-          }, 100);
+            }, 100);
+          }
 
         } else {
           setAuthState({
