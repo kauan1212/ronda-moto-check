@@ -130,11 +130,6 @@ const AdminPanel = () => {
   };
 
   const handleCondominiumSelect = (condominium: Condominium) => {
-    // Admin geral pode selecionar qualquer condomínio
-    if (!isGeneralAdmin && condominium.user_id !== user?.id) {
-      console.warn('AdminPanel: Attempted to select condominium not owned by user');
-      return;
-    }
     console.log('AdminPanel: Selected condominium:', condominium.name);
     setSelectedCondominiumId(condominium.id);
   };

@@ -20,33 +20,24 @@ const queryClient = new QueryClient({
 
 const App = () => {
   return (
-    <React.Fragment>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <TooltipProvider>
-            <div className="min-h-screen w-full">
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={
-                    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-                      <div className="text-center">
-                        <h1 className="text-2xl font-bold mb-4">Sistema Carregado</h1>
-                        <p>React funcionando corretamente</p>
-                      </div>
-                    </div>
-                  } />
-                  <Route path="/admin" element={<SecureAuthWrapper />} />
-                  <Route path="/vigilante-checklist" element={<VigilanteChecklistPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </div>
-          </TooltipProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </React.Fragment>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <TooltipProvider>
+          <div className="min-h-screen w-full">
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<SecureAuthWrapper />} />
+                <Route path="/admin" element={<SecureAuthWrapper />} />
+                <Route path="/vigilante-checklist" element={<VigilanteChecklistPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </div>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 
