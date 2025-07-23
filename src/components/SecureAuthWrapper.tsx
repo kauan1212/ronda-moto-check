@@ -89,15 +89,13 @@ const SecureAuthWrapper = () => {
   if (hasAccessViolation) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="text-6xl">🚫</div>
-          <h1 className="text-2xl font-bold text-red-800">Acesso Negado</h1>
-          <p className="text-red-600">
-            Sua conta não tem permissão para acessar o sistema.
-            <br />
-            Entre em contato com o administrador.
+        <div className="text-center space-y-4 max-w-md mx-auto p-6">
+          <div className="text-6xl">⚠️</div>
+          <h1 className="text-2xl font-bold text-red-800">Conteúdo Indisponível</h1>
+          <p className="text-red-600 text-lg">
+            Conteúdo indisponível por inadimplência, favor entrar em contato com o suporte responsável.
           </p>
-          <Button onClick={forceLogout} className="mt-4">
+          <Button onClick={forceLogout} className="mt-6" variant="outline">
             Voltar ao Login
           </Button>
         </div>
