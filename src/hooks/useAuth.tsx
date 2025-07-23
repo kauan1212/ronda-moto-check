@@ -36,8 +36,9 @@ export const useAuth = () => {
             isAdmin,
           });
 
-          // Background profile check for non-admin users only
+          // Verificação contínua para usuários não-admin
           if (!isAdmin) {
+            // Verificação inicial
             setTimeout(async () => {
               try {
                 const { data: profile } = await supabase
@@ -53,6 +54,31 @@ export const useAuth = () => {
               } catch (error) {
                 console.error('Erro ao verificar perfil:', error);
               }
+            }, 100);
+
+            // Verificação contínua a cada 2 segundos
+            const intervalId = setInterval(async () => {
+              if (!mounted) return;
+              
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('account_status')
+                  .eq('id', session.user.id)
+                  .maybeSingle();
+
+                if (profile?.account_status === 'frozen') {
+                  console.log('🚫 Conta congelada detectada em tempo real no useAuth - forçando logout');
+                  await supabase.auth.signOut();
+                }
+              } catch (error) {
+                console.error('Erro ao verificar perfil em tempo real:', error);
+              }
+            }, 2000);
+
+            // Limpar interval quando o componente for desmontado
+            setTimeout(() => {
+              if (!mounted) clearInterval(intervalId);
             }, 100);
           }
 
