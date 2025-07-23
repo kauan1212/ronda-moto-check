@@ -25,11 +25,14 @@ const SecureAuthWrapper = () => {
     }
   }, [loading]);
 
-  // Security check for all non-admin users (including vigilantes)
+  // Real-time security check for all non-admin users
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
+
     if (user && !loading && !isAdmin) {
-      // Check account status for all non-admin users
-      setTimeout(async () => {
+      // Initial check with delay
+      timeoutId = setTimeout(async () => {
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -41,13 +44,38 @@ const SecureAuthWrapper = () => {
             console.log('🚫 Conta congelada detectada - forçando logout');
             setHasAccessViolation(true);
             await supabase.auth.signOut();
+            return;
           }
         } catch (error) {
           console.error('Erro ao verificar status da conta:', error);
         }
-      }, 500); // Delay to not block initial render
+      }, 500);
+
+      // Continuous check every 3 seconds for real-time blocking
+      intervalId = setInterval(async () => {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('account_status')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (profile?.account_status === 'frozen') {
+            console.log('🚫 Conta congelada detectada em tempo real - forçando logout');
+            setHasAccessViolation(true);
+            await supabase.auth.signOut();
+          }
+        } catch (error) {
+          console.error('Erro ao verificar status da conta em tempo real:', error);
+        }
+      }, 3000); // Check every 3 seconds
     }
-  }, [user?.id, isAdmin]); // Only depend on user ID and admin status
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [user?.id, isAdmin, loading]);
 
   if (loading) {
     return (
