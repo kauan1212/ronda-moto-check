@@ -31,6 +31,13 @@ const SecureAuthWrapper = () => {
     let timeoutId: NodeJS.Timeout;
 
     if (user && !loading && !isAdmin) {
+      // Check for specific blocked email first
+      if (user.email === 'testedesistemavistoria@gmail.com') {
+        console.log('🚫 Usuário bloqueado detectado:', user.email);
+        setHasAccessViolation(true);
+        return;
+      }
+
       // Initial check with delay
       timeoutId = setTimeout(async () => {
         try {
@@ -75,7 +82,7 @@ const SecureAuthWrapper = () => {
       if (intervalId) clearInterval(intervalId);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [user?.id, isAdmin, loading]);
+  }, [user?.id, user?.email, isAdmin, loading]);
 
   if (loading) {
     return (
@@ -118,10 +125,10 @@ const SecureAuthWrapper = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md mx-auto p-6">
-          <div className="text-6xl">⚠️</div>
-          <h1 className="text-2xl font-bold text-red-800">Conteúdo Indisponível</h1>
+          <div className="text-6xl">🚫</div>
+          <h1 className="text-2xl font-bold text-red-800">Acesso Negado</h1>
           <p className="text-red-600 text-lg">
-            Conteúdo indisponível por inadimplência, favor entrar em contato com o suporte responsável.
+            Sua conta não tem permissão para acessar o sistema.
           </p>
           <Button onClick={forceLogout} className="mt-6" variant="outline">
             Voltar ao Login

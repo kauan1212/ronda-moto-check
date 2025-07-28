@@ -111,7 +111,7 @@ const SecureLoginPage = () => {
           if (profile?.account_status === 'frozen') {
             console.log('🧊 SecureLoginPage: Account frozen');
             await supabase.auth.signOut();
-            toast.error('Sua conta foi congelada. Entre em contato com o administrador.');
+            toast.error('Acesso Negado. Sua conta não tem permissão para acessar o sistema.');
             recordAttempt(false);
             return;
           }
