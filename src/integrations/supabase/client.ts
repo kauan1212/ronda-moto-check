@@ -6,7 +6,93 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://wncyfbkhgwcpbpbtbwaq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduY3lmYmtoZ3djcGJwYnRid2FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA5MDQxMjEsImV4cCI6MjA2NjQ4MDEyMX0.QyYLjCWR6Y5xXVP9i7O1wOFNLL2gYYhB6vWr-pFh4Gs";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Configuração personalizada para persistência de sessão
+const localStorageKey = 'supabase.auth.token';
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Função para obter o token armazenado localmente
+const getStoredSession = () => {
+  if (typeof window === 'undefined') return null;
+  const storedData = localStorage.getItem(localStorageKey);
+  if (!storedData) return null;
+  
+  try {
+    const parsed = JSON.parse(storedData);
+    return parsed.currentSession;
+  } catch (error) {
+    console.error('Erro ao analisar sessão armazenada:', error);
+    return null;
+  }
+};
+
+// Configuração do cliente Supabase com opções personalizadas
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      storageKey: 'vigio-auth-token',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: {
+        getItem: (key) => {
+          const item = localStorage.getItem(key);
+          console.log('🔑 Obtendo item do armazenamento:', key, item ? '***' : 'não encontrado');
+          return item;
+        },
+        setItem: (key, value) => {
+          console.log('💾 Definindo item no armazenamento:', key, value ? '***' : 'vazio');
+          localStorage.setItem(key, value);
+        },
+        removeItem: (key) => {
+          console.log('🗑️ Removendo item do armazenamento:', key);
+          localStorage.removeItem(key);
+        },
+      },
+    },
+  }
+);
+
+// Adiciona logs para eventos de autenticação
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('🔐 Evento de autenticação:', event, session ? 'Sessão ativa' : 'Sem sessão');
+  
+  if (event === 'SIGNED_IN') {
+    console.log('✅ Usuário autenticado:', session?.user?.email);
+  } else if (event === 'SIGNED_OUT') {
+    console.log('🚪 Usuário desconectado');
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('🔄 Token atualizado');
+  } else if (event === 'USER_UPDATED') {
+    console.log('👤 Dados do usuário atualizados');
+  }
+});
+
+// Verifica a sessão atual ao carregar
+const checkCurrentSession = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('❌ Erro ao verificar sessão:', error);
+      return;
+    }
+    
+    if (data.session) {
+      console.log('🔍 Sessão encontrada:', {
+        user: data.session.user.email,
+        expiresAt: new Date(data.session.expires_at * 1000).toISOString(),
+        expiresIn: Math.round((data.session.expires_at * 1000 - Date.now()) / 1000 / 60) + ' minutos'
+      });
+    } else {
+      console.log('🔍 Nenhuma sessão ativa encontrada');
+    }
+  } catch (error) {
+    console.error('❌ Erro inesperado ao verificar sessão:', error);
+  }
+};
+
+// Executa a verificação de sessão quando o cliente for importado
+if (typeof window !== 'undefined') {
+  console.log('🔍 Verificando sessão atual...');
+  checkCurrentSession();
+}

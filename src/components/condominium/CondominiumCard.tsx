@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Edit, Trash2, MapPin, Phone, Mail, Download, FileX } from 'lucide-react';
+import { Building2, Edit, Trash2, MapPin, Phone, Mail, Download, FileX, X } from 'lucide-react';
 import { Condominium } from '@/types';
 import { toast } from 'sonner';
 
@@ -29,10 +29,21 @@ const CondominiumCard = ({
   showChecklistActions
 }: CondominiumCardProps) => {
   return (
-    <Card className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300">
+    <Card className="hover:shadow-lg transition-shadow border-2 hover:border-blue-300 relative">
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute right-1 top-1 h-6 w-6 rounded-full hover:bg-red-100 hover:text-red-600 z-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(condominium);
+        }}
+      >
+        <X className="h-3 w-3" />
+      </Button>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base sm:text-lg">
-          <div className="flex items-center min-w-0 flex-1">
+          <div className="flex items-center min-w-0 flex-1 pr-6">
             <Building2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
             <span className="truncate">{condominium.name}</span>
           </div>
